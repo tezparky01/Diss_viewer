@@ -5,13 +5,8 @@ A modern BIM (Building Information Modeling) viewer built with TypeScript, Three
 ## Features
 
 - **3D Model Viewing**: Interactive 3D visualization of BIM models
-- **Measurement Tools**: Length and area measurement capabilities with automatic 0m annotation cleanup
+- **Measurement Tools**: Length and area measurement capabilities
 - **Clipping Planes**: Section cutting tools for detailed model analysis
-- **Data Management**: Advanced data extraction and management tools
-  - **Element Classification**: Automatically classify elements by category, building storey, or model
-  - **Element Finder**: Create and execute complex queries to find specific elements
-  - **Data Extraction**: Export element properties and metadata
-  - **Export Functionality**: Export classification and query results as JSON files
 - **Model Management**: Load and manage multiple BIM models
 - **Viewpoints**: Save and restore camera positions
 - **Element Selection**: Interactive element highlighting and selection
@@ -75,27 +70,6 @@ The built files will be in the `dist` directory.
 - Click the "Measurements" button to access length and area measurement tools
 - Select a measurement type and interact with the 3D model
 - Use the delete functions to clear measurements
-- First double-clicks no longer create unwanted 0m annotations
-
-### Data Management
-
-The Data Management panel provides powerful tools for analyzing and extracting BIM data:
-
-#### Element Classification
-- **Classify by Category**: Group elements by their IFC categories (walls, doors, windows, etc.)
-- **Classify by Building Storey**: Organize elements by floor levels
-- **Classify by Model**: Separate elements by source model file
-- **Export Classification Data**: Download classification results as JSON files
-
-#### Element Finder
-- **Create Category Queries**: Generate search queries based on element categories
-- **Execute Queries**: Run queries to find specific elements matching criteria
-- **Export Finder Data**: Save query configurations and results
-
-#### Data Extraction
-- **Extract All Element Data**: Get detailed properties and metadata for all model elements
-- **View Properties**: Browse element properties, names, types, and attributes
-- **Export Options**: Save extracted data for external analysis
 
 ### Clipping Planes
 

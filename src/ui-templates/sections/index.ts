@@ -2,4 +2,3 @@ export * from "./models";
 export * from "./elements-data";
 export * from "./viewpoints";
 export * from "./tools-management";
-export * from "./data-management";

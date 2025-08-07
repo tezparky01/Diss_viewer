@@ -62,7 +62,7 @@ components.init();
 components.get(OBC.Raycasters).get(world);
 
 // Initialize Viewpoints component for saving/loading camera views
-const viewpoints = components.get(OBC.Viewpoints);
+// const viewpoints = components.get(OBC.Viewpoints);
 
 // Add some basic lighting to the scene
 const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
@@ -138,15 +138,6 @@ highlighter.setup({
     opacity: 1,
     transparent: false,
   },
-});
-
-// Initialize data management components
-const classifier = components.get(OBC.Classifier);
-const itemsFinder = components.get(OBC.ItemsFinder);
-
-console.log("Data management components initialized:", {
-  classifier: classifier.enabled,
-  itemsFinder: itemsFinder.enabled,
 });
 
 // Clipper Setup - following That Open Company methodology
@@ -339,6 +330,8 @@ window.addEventListener(
 
 // Define what happens when a fragments model has been loaded
 fragments.list.onItemSet.add(async ({ value: model }) => {
+  console.log("🏗️ Model loaded:", model.object.name || "Unnamed Model", "| Total models:", fragments.list.size);
+  
   model.useCamera(world.camera.three);
   model.getClippingPlanesEvent = () => {
     return Array.from(world.renderer!.three.clippingPlanes) || [];
@@ -346,15 +339,22 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
   world.scene.three.add(model.object);
   await fragments.core.update(true);
   
-  // Enable data management components now that models are available
-  console.log("Model loaded, enabling data management features");
+  // Update Tools Management panel when a new model is loaded
+  const contentGrid = document.getElementById(CONTENT_GRID_ID) as any;
+  if (contentGrid?.updateComponent?.toolsManagement) {
+    console.log("📊 Updating Tools Management panel - models now active");
+    contentGrid.updateComponent.toolsManagement();
+  }
+});
+
+// Handle when models are removed
+fragments.list.onItemDeleted.add(() => {
+  console.log("🗑️ Model removed | Remaining models:", fragments.list.size);
   
-  // Auto-classify by model when a new model is loaded
-  try {
-    await classifier.byModel();
-    console.log("Auto-classification by model completed");
-  } catch (error) {
-    console.warn("Auto-classification failed:", error);
+  const contentGrid = document.getElementById(CONTENT_GRID_ID) as any;
+  if (contentGrid?.updateComponent?.toolsManagement) {
+    console.log("📊 Updating Tools Management panel - checking model count");
+    contentGrid.updateComponent.toolsManagement();
   }
 });
 

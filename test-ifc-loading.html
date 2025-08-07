@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFC Loading Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1d23;
+            color: white;
+        }
+        .test-info {
+            background: #2d3748;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .steps {
+            background: #4a5568;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .expected {
+            background: #2d5016;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #48bb78;
+        }
+        code {
+            background: #1a202c;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏗️ IFC Model Loading Test Instructions</h1>
+    
+    <div class="test-info">
+        <h2>✅ Fix Applied: Enhanced FragmentsManager Data Extraction</h2>
+        <p>The Tools Management panel buttons should now become <strong>active</strong> when IFC models are loaded.</p>
+    </div>
+
+    <div class="steps">
+        <h3>🧪 How to Test:</h3>
+        <ol>
+            <li>Open the main application: <code>npm run dev</code></li>
+            <li>Load any IFC file using the file picker or drag & drop</li>
+            <li>Open the Tools Management panel from the sidebar</li>
+            <li>Check the console for loading messages</li>
+        </ol>
+    </div>
+
+    <div class="expected">
+        <h3>🎯 Expected Behavior:</h3>
+        <ul>
+            <li><strong>Before Loading:</strong> "FragmentsManager Data (0)" - buttons disabled</li>
+            <li><strong>After Loading:</strong> "FragmentsManager Data (1)" - buttons enabled</li>
+            <li><strong>Console Output:</strong> 
+                <br><code>🏗️ Model loaded: [ModelName] | Total models: 1</code>
+                <br><code>📊 Updating Tools Management panel - models now active</code>
+            </li>
+            <li><strong>Button States:</strong> "Extract Elements", "Model Properties", "Export All" become clickable</li>
+        </ul>
+    </div>
+
+    <div class="test-info">
+        <h3>🔧 Technical Details:</h3>
+        <p><strong>Problem:</strong> The Tools Management panel used a stateful component that didn't auto-update when models were loaded via the FragmentsManager.</p>
+        
+        <p><strong>Solution:</strong> Added event listeners to <code>fragments.list.onItemSet</code> and <code>fragments.list.onItemDeleted</code> that trigger UI updates when models are loaded or removed.</p>
+        
+        <p><strong>Files Modified:</strong></p>
+        <ul>
+            <li><code>src/main.ts</code> - Added model loading event handlers</li>
+            <li><code>src/ui-templates/sections/tools-management.ts</code> - Enhanced with data extraction features</li>
+        </ul>
+    </div>
+
+    <div class="steps">
+        <h3>🚀 Test with Sample Data:</h3>
+        <p>Try loading these types of IFC files:</p>
+        <ul>
+            <li>Small architectural models (.ifc)</li>
+            <li>Building models with multiple elements</li>
+            <li>Models with walls, doors, windows, etc.</li>
+        </ul>
+        <p><em>The data extraction will work with any valid IFC model that loads successfully.</em></p>
+    </div>
+
+    <script>
+        // Simple test to verify the main app is running
+        if (window.location.port !== '5176' && window.location.port !== '5173') {
+            document.body.innerHTML += '<div style="background: #742a2a; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #fc8181;"><strong>⚠️ Note:</strong> Make sure to run <code>npm run dev</code> to start the application first!</div>';
+        }
+    </script>
+</body>
+</html>
