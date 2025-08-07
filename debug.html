@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Viewport</title>
+    <script>
+        // Check if the BIM app is working
+        window.addEventListener('load', () => {
+            console.log('Debug: Page loaded');
+            
+            setTimeout(() => {
+                // Check for viewport element
+                const viewport = document.querySelector('bim-viewport');
+                console.log('Debug: Viewport element found:', viewport);
+                
+                // Check for canvas
+                const canvas = document.querySelector('canvas');
+                console.log('Debug: Canvas element found:', canvas);
+                
+                // Check for any errors
+                if (!viewport) console.error('Debug: No viewport element found');
+                if (!canvas) console.error('Debug: No canvas element found');
+                
+                // Check if viewport has size
+                if (viewport) {
+                    const rect = viewport.getBoundingClientRect();
+                    console.log('Debug: Viewport dimensions:', rect.width, 'x', rect.height);
+                    if (rect.width === 0 || rect.height === 0) {
+                        console.error('Debug: Viewport has zero dimensions');
+                    }
+                }
+                
+                // Check if there are any global objects
+                console.log('Debug: Window objects:', Object.keys(window).filter(key => key.includes('components') || key.includes('world')));
+                
+            }, 2000);
+        });
+        
+        // Catch any errors
+        window.addEventListener('error', (e) => {
+            console.error('Debug: JavaScript error:', e.error);
+        });
+    </script>
+</head>
+<body>
+    <h1>Debug Page</h1>
+    <p>Check the console for debug information about the main app at <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></p>
+</body>
+</html>
