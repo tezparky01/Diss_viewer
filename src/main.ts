@@ -276,24 +276,25 @@ viewport.addEventListener("dblclick", () => {
 });
 
 // Unified keyboard shortcuts for That Open Company tools
+// Using capture phase to work even when UI elements have focus
 window.addEventListener("keydown", (event) => {
   if (event.code === "Delete" || event.code === "Backspace") {
     event.preventDefault(); // Prevent browser back navigation
     
-    // Delete from active tools based on current tool state
+    console.log("Delete key pressed"); // Debug log
+    
+    // Try to delete measurements under cursor (works when hovering over annotations)
+    lengthMeasurer.delete();
+    areaMeasurer.delete();
+    
+    // Also handle clipping planes if clipper is enabled
     if (clipper.enabled) {
-      // Delete the last created clipping plane by ID
       const planeIds = Array.from(clipper.list.keys());
       if (planeIds.length > 0) {
         const lastPlaneId = planeIds[planeIds.length - 1];
         clipper.delete(world, lastPlaneId);
+        console.log("Deleted clipping plane:", lastPlaneId);
       }
-    } else if (lengthMeasurer.enabled) {
-      // Delete the last created measurement
-      lengthMeasurer.delete();
-    } else if (areaMeasurer.enabled) {
-      // Delete the last created area measurement
-      areaMeasurer.delete();
     }
   }
   
@@ -302,7 +303,7 @@ window.addEventListener("keydown", (event) => {
       areaMeasurer.endCreation();
     }
   }
-});
+}, true); // Enable capture phase to work even when UI elements have focus
 
 // Define what happens when a fragments model has been loaded
 fragments.list.onItemSet.add(async ({ value: model }) => {

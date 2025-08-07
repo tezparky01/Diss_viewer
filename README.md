@@ -30,17 +30,20 @@ A modern BIM (Building Information Modeling) viewer built with TypeScript, Three
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/tezparky01/Diss_viewer.git
    cd Diss_viewer
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Start the development server:
+
    ```bash
    npm run dev
    ```
@@ -58,20 +61,24 @@ The built files will be in the `dist` directory.
 ## Usage
 
 ### Loading Models
+
 - Use the model loading interface to import BIM files
 - Supported formats depend on ThatOpen Components capabilities
 
 ### Measurement Tools
+
 - Click the "Measurements" button to access length and area measurement tools
 - Select a measurement type and interact with the 3D model
 - Use the delete functions to clear measurements
 
 ### Clipping Planes
+
 - Click the "Section" button to enable clipping tools
 - Create section cuts to analyze internal model details
 - Manage clipping planes through the context menu
 
 ### Viewpoints
+
 - Save current camera positions for easy navigation
 - Restore saved viewpoints with a single click
 
