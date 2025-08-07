@@ -149,10 +149,18 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
 
     const onDeleteMeasurements = async ({ target }: { target: BUI.Button }) => {
       target.loading = true;
-      // Clear all measurements
-      lengthMeasurer.delete();
-      areaMeasurer.delete();
+      console.log("Delete All Measurements clicked");
+      
+      // Clear all length measurements
+      lengthMeasurer.list.clear();
+      console.log("Length measurements cleared");
+      
+      // Clear all area measurements  
+      areaMeasurer.list.clear();
+      console.log("Area measurements cleared");
+      
       target.loading = false;
+      update(); // Update UI to reflect changes
     };
 
     // eslint-disable-next-line prettier/prettier

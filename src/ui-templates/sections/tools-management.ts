@@ -19,8 +19,12 @@ export const toolsManagementPanelTemplate: BUI.StatefullComponent<
 
   const onClearMeasurements = async ({ target }: { target: BUI.Button }) => {
     target.loading = true;
-    lengthMeasurer.delete();
-    areaMeasurer.delete();
+    console.log("Clearing all measurements from tools management panel");
+    
+    // Clear all measurements using the list.clear() method
+    lengthMeasurer.list.clear();
+    areaMeasurer.list.clear();
+    
     target.loading = false;
     update();
   };

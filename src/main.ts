@@ -140,6 +140,15 @@ highlighter.setup({
   },
 });
 
+// Initialize data management components
+const classifier = components.get(OBC.Classifier);
+const itemsFinder = components.get(OBC.ItemsFinder);
+
+console.log("Data management components initialized:", {
+  classifier: classifier.enabled,
+  itemsFinder: itemsFinder.enabled,
+});
+
 // Clipper Setup - following That Open Company methodology
 const clipper = components.get(OBC.Clipper);
 
@@ -186,8 +195,8 @@ const lengthMeasurer = components.get(OBF.LengthMeasurement);
 // Provide a world to create dimensions inside
 lengthMeasurer.world = world;
 lengthMeasurer.color = new THREE.Color("#6528d7");
-// As a best practice, always set the enabled state after the initial config
-lengthMeasurer.enabled = true;
+// Start disabled to prevent 0m annotations on first click
+lengthMeasurer.enabled = false;
 
 console.log("Length measurer initialized:", {
   world: lengthMeasurer.world ? "assigned" : "not assigned",
@@ -197,11 +206,30 @@ console.log("Length measurer initialized:", {
 
 lengthMeasurer.list.onItemAdded.add((line) => {
   console.log("Length measurement created");
-  const center = new THREE.Vector3();
-  line.getCenter(center);
-  const radius = line.distance() / 3;
-  const sphere = new THREE.Sphere(center, radius);
-  world.camera.controls.fitToSphere(sphere, true);
+  
+  // Set up a short delay to check if measurement is complete
+  setTimeout(() => {
+    const distance = line.distance();
+    console.log("Length measurement distance:", distance);
+    
+    if (distance === 0) {
+      // Remove 0m measurements automatically
+      console.log("Removing incomplete 0m length measurement");
+      const lineId = Array.from(lengthMeasurer.list.entries()).find(
+        ([_, l]) => l === line,
+      )?.[0];
+      if (lineId) {
+        lengthMeasurer.list.delete(lineId);
+      }
+    } else {
+      // Valid measurement, focus on it
+      const center = new THREE.Vector3();
+      line.getCenter(center);
+      const radius = distance / 3;
+      const sphere = new THREE.Sphere(center, radius);
+      world.camera.controls.fitToSphere(sphere, true);
+    }
+  }, 50); // Very short delay to allow measurement to complete
   
   // Update UI when measurements change
   const contentGrid = document.getElementById(CONTENT_GRID_ID) as any;
@@ -223,8 +251,8 @@ const areaMeasurer = components.get(OBF.AreaMeasurement);
 // Provide a world to create dimensions inside
 areaMeasurer.world = world;
 areaMeasurer.color = new THREE.Color("#6528d7");
-// As a best practice, always set the enabled state after the initial config
-areaMeasurer.enabled = true;
+// Start disabled to prevent unwanted annotations on first click
+areaMeasurer.enabled = false;
 
 console.log("Area measurer initialized:", {
   world: areaMeasurer.world ? "assigned" : "not assigned",
@@ -277,33 +305,37 @@ viewport.addEventListener("dblclick", () => {
 
 // Unified keyboard shortcuts for That Open Company tools
 // Using capture phase to work even when UI elements have focus
-window.addEventListener("keydown", (event) => {
-  if (event.code === "Delete" || event.code === "Backspace") {
-    event.preventDefault(); // Prevent browser back navigation
-    
-    console.log("Delete key pressed"); // Debug log
-    
-    // Try to delete measurements under cursor (works when hovering over annotations)
-    lengthMeasurer.delete();
-    areaMeasurer.delete();
-    
-    // Also handle clipping planes if clipper is enabled
-    if (clipper.enabled) {
-      const planeIds = Array.from(clipper.list.keys());
-      if (planeIds.length > 0) {
-        const lastPlaneId = planeIds[planeIds.length - 1];
-        clipper.delete(world, lastPlaneId);
-        console.log("Deleted clipping plane:", lastPlaneId);
+window.addEventListener(
+  "keydown",
+  (event) => {
+    if (event.code === "Delete" || event.code === "Backspace") {
+      event.preventDefault(); // Prevent browser back navigation
+
+      console.log("Delete key pressed"); // Debug log
+
+      // Try to delete measurements under cursor (works when hovering over annotations)
+      lengthMeasurer.delete();
+      areaMeasurer.delete();
+
+      // Also handle clipping planes if clipper is enabled
+      if (clipper.enabled) {
+        const planeIds = Array.from(clipper.list.keys());
+        if (planeIds.length > 0) {
+          const lastPlaneId = planeIds[planeIds.length - 1];
+          clipper.delete(world, lastPlaneId);
+          console.log("Deleted clipping plane:", lastPlaneId);
+        }
       }
     }
-  }
-  
-  if (event.code === "Enter" || event.code === "NumpadEnter") {
-    if (areaMeasurer.enabled) {
-      areaMeasurer.endCreation();
+
+    if (event.code === "Enter" || event.code === "NumpadEnter") {
+      if (areaMeasurer.enabled) {
+        areaMeasurer.endCreation();
+      }
     }
-  }
-}, true); // Enable capture phase to work even when UI elements have focus
+  },
+  true,
+); // Enable capture phase to work even when UI elements have focus
 
 // Define what happens when a fragments model has been loaded
 fragments.list.onItemSet.add(async ({ value: model }) => {
@@ -313,6 +345,17 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
   };
   world.scene.three.add(model.object);
   await fragments.core.update(true);
+  
+  // Enable data management components now that models are available
+  console.log("Model loaded, enabling data management features");
+  
+  // Auto-classify by model when a new model is loaded
+  try {
+    await classifier.byModel();
+    console.log("Auto-classification by model completed");
+  } catch (error) {
+    console.warn("Auto-classification failed:", error);
+  }
 });
 
 // Viewport Layouts

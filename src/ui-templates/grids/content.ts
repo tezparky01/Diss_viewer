@@ -26,12 +26,18 @@ type ToolsManagement = {
   state: TEMPLATES.ToolsManagementPanelState;
 };
 
+type DataManagement = {
+  name: "dataManagement";
+  state: { components: OBC.Components };
+};
+
 export type ContentGridElements = [
   Viewer,
   Models,
   ElementData,
   Viewpoints,
   ToolsManagement,
+  DataManagement,
 ];
 
 export type ContentGridLayouts = ["Viewer"];
@@ -69,6 +75,10 @@ export const contentGridTemplate: BUI.StatefullComponent<ContentGridState> = (
         template: TEMPLATES.toolsManagementPanelTemplate,
         initialState: { components, world: world! },
       },
+      dataManagement: {
+        template: TEMPLATES.dataManagementTemplate,
+        initialState: { components },
+      },
       viewer: state.viewportTemplate,
     };
 
@@ -77,6 +87,7 @@ export const contentGridTemplate: BUI.StatefullComponent<ContentGridState> = (
         template: `
           "models viewer elementData" 1fr
           "viewpoints viewer toolsManagement" 1fr
+          "dataManagement viewer dataManagement" 0.5fr
           /${SMALL_COLUMN_WIDTH} 1fr ${SMALL_COLUMN_WIDTH}
         `,
       },
