@@ -2,8 +2,6 @@ import * as THREE from "three";
 import * as OBC from "@thatopen/components";
 import * as OBF from "@thatopen/components-front";
 import * as BUI from "@thatopen/ui";
-// Import worker URL for production builds
-import workerUrl from "@thatopen/fragments/dist/Worker/worker.mjs?url";
 import * as TEMPLATES from "./ui-templates";
 import { appIcons, CONTENT_GRID_ID } from "./globals";
 import { viewportSettingsTemplate } from "./ui-templates/buttons/viewport-settings";
@@ -106,7 +104,7 @@ aoPass.updateGtaoMaterial(aoParameters);
 aoPass.updatePdMaterial(pdParameters);
 
 const fragments = components.get(OBC.FragmentsManager);
-fragments.init(workerUrl);
+fragments.init("/node_modules/@thatopen/fragments/dist/Worker/worker.mjs");
 
 fragments.core.models.materials.list.onItemSet.add(({ value: material }) => {
   const isLod = "isLodMaterial" in material && material.isLodMaterial;
@@ -200,6 +198,16 @@ console.log("Length measurer initialized:", {
 lengthMeasurer.list.onItemAdded.add((line) => {
   console.log("Length measurement created");
   
+  // Disable raycasting on helper meshes to prevent selection interference
+  if ((line as any).object) {
+    const obj = (line as any).object;
+    // Disable raycasting for the main object and all children
+    obj.raycast = () => false;
+    obj.traverse((child: any) => {
+      if (child.raycast) child.raycast = () => false;
+    });
+  }
+  
   // Set up a short delay to check if measurement is complete
   setTimeout(() => {
     const distance = line.distance();
@@ -255,6 +263,17 @@ console.log("Area measurer initialized:", {
 
 areaMeasurer.list.onItemAdded.add((area) => {
   console.log("Area measurement created");
+  
+  // Disable raycasting on helper meshes to prevent selection interference
+  if ((area as any).object) {
+    const obj = (area as any).object;
+    // Disable raycasting for the main object and all children
+    obj.raycast = () => false;
+    obj.traverse((child: any) => {
+      if (child.raycast) child.raycast = () => false;
+    });
+  }
+  
   if (!area.boundingBox) return;
   const sphere = new THREE.Sphere();
   area.boundingBox.getBoundingSphere(sphere);
@@ -274,6 +293,45 @@ areaMeasurer.list.onItemDeleted.add(() => {
     contentGrid.updateComponent.toolsManagement();
   }
 });
+
+// Utility function to clear all measurements
+function clearAllMeasurements() {
+  console.log("🧹 Clearing all measurements");
+  
+  // Clear length measurements - use forEach to iterate
+  lengthMeasurer.list.forEach((line) => {
+    if ((line as any).dispose) {
+      (line as any).dispose();
+    }
+  });
+  lengthMeasurer.list.clear();
+  
+  // Clear area measurements - use forEach to iterate
+  areaMeasurer.list.forEach((area) => {
+    if ((area as any).dispose) {
+      (area as any).dispose();
+    }
+  });
+  areaMeasurer.list.clear();
+  
+  // Clear clipping planes if any exist
+  const planeIds = Array.from(clipper.list.keys());
+  planeIds.forEach((id) => {
+    clipper.delete(world, id);
+  });
+  
+  console.log(
+    "✅ Cleared all measurements and",
+    planeIds.length,
+    "clipping planes",
+  );
+  
+  // Update UI
+  const contentGrid = document.getElementById(CONTENT_GRID_ID) as any;
+  if (contentGrid?.updateComponent?.toolsManagement) {
+    contentGrid.updateComponent.toolsManagement();
+  }
+}
 
 // That Open Company tool interaction handlers - controlled by tool enabled state
 viewport.addEventListener("dblclick", () => {
@@ -325,6 +383,12 @@ window.addEventListener(
       if (areaMeasurer.enabled) {
         areaMeasurer.endCreation();
       }
+    }
+
+    // Clear all measurements with Ctrl+C (or Cmd+C on Mac)
+    if (event.code === "KeyC" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      clearAllMeasurements();
     }
   },
   true,
