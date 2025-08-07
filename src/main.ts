@@ -2,6 +2,8 @@ import * as THREE from "three";
 import * as OBC from "@thatopen/components";
 import * as OBF from "@thatopen/components-front";
 import * as BUI from "@thatopen/ui";
+// Import worker URL for production builds
+import workerUrl from "@thatopen/fragments/dist/Worker/worker.mjs?url";
 import * as TEMPLATES from "./ui-templates";
 import { appIcons, CONTENT_GRID_ID } from "./globals";
 import { viewportSettingsTemplate } from "./ui-templates/buttons/viewport-settings";
@@ -104,7 +106,7 @@ aoPass.updateGtaoMaterial(aoParameters);
 aoPass.updatePdMaterial(pdParameters);
 
 const fragments = components.get(OBC.FragmentsManager);
-fragments.init("/node_modules/@thatopen/fragments/dist/Worker/worker.mjs");
+fragments.init(workerUrl);
 
 fragments.core.models.materials.list.onItemSet.add(({ value: material }) => {
   const isLod = "isLodMaterial" in material && material.isLodMaterial;
@@ -186,8 +188,8 @@ const lengthMeasurer = components.get(OBF.LengthMeasurement);
 // Provide a world to create dimensions inside
 lengthMeasurer.world = world;
 lengthMeasurer.color = new THREE.Color("#6528d7");
-// Start disabled to prevent 0m annotations on first click
-lengthMeasurer.enabled = false;
+// Enable to allow hit-testing and delete functionality
+lengthMeasurer.enabled = true;
 
 console.log("Length measurer initialized:", {
   world: lengthMeasurer.world ? "assigned" : "not assigned",
@@ -242,8 +244,8 @@ const areaMeasurer = components.get(OBF.AreaMeasurement);
 // Provide a world to create dimensions inside
 areaMeasurer.world = world;
 areaMeasurer.color = new THREE.Color("#6528d7");
-// Start disabled to prevent unwanted annotations on first click
-areaMeasurer.enabled = false;
+// Enable to allow hit-testing and delete functionality
+areaMeasurer.enabled = true;
 
 console.log("Area measurer initialized:", {
   world: areaMeasurer.world ? "assigned" : "not assigned",
@@ -304,7 +306,7 @@ window.addEventListener(
 
       console.log("Delete key pressed"); // Debug log
 
-      // Try to delete measurements under cursor (works when hovering over annotations)
+      // Try to delete measurements under cursor - try both
       lengthMeasurer.delete();
       areaMeasurer.delete();
 
@@ -330,7 +332,12 @@ window.addEventListener(
 
 // Define what happens when a fragments model has been loaded
 fragments.list.onItemSet.add(async ({ value: model }) => {
-  console.log("🏗️ Model loaded:", model.object.name || "Unnamed Model", "| Total models:", fragments.list.size);
+  console.log(
+    "🏗️ Model loaded:",
+    model.object.name || "Unnamed Model",
+    "| Total models:",
+    fragments.list.size,
+  );
   
   model.useCamera(world.camera.three);
   model.getClippingPlanesEvent = () => {

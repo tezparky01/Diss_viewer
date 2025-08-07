@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Measurement Debug Test</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px; 
+            font-family: Arial, sans-serif;
+            background: #1a1d23;
+            color: white;
+        }
+        .instructions {
+            background: #2a2d33;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #6528d7;
+        }
+        .test-list {
+            background: #2a2d33;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #1a1d23;
+            border-radius: 4px;
+            border-left: 3px solid #bcf124;
+        }
+        .highlight {
+            background: #6528d7;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #6528d7;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h2>🔧 Measurement Tool Debugging Test</h2>
+        <p>This page tests the fixes applied to the measurement system:</p>
+        <ul>
+            <li><strong>Enabled Measurers:</strong> Both length and area measurers now have <code>enabled = true</code></li>
+            <li><strong>Hit Testing:</strong> Hover over measurements should show lime-green outline</li>
+            <li><strong>Delete Functionality:</strong> Press <span class="highlight">Delete</span> or <span class="highlight">Backspace</span> while hovering</li>
+            <li><strong>Worker Fix:</strong> Production builds should load fragments without worker errors</li>
+        </ul>
+    </div>
+
+    <div class="test-list">
+        <h3>🧪 Test Steps</h3>
+        <div class="test-item">
+            <strong>1. Load a BIM Model:</strong> Use the file upload or sample models
+        </div>
+        <div class="test-item">
+            <strong>2. Enable Length Tool:</strong> Click the length measurement button in Tools Management
+        </div>
+        <div class="test-item">
+            <strong>3. Create Measurement:</strong> Double-click two points to create a length measurement
+        </div>
+        <div class="test-item">
+            <strong>4. Test Hover:</strong> Hover over the measurement annotation - should show lime outline
+        </div>
+        <div class="test-item">
+            <strong>5. Test Delete:</strong> While hovering, press Delete/Backspace - measurement should disappear
+        </div>
+        <div class="test-item">
+            <strong>6. Test Area Tool:</strong> Repeat similar steps with area measurement tool
+        </div>
+        <div class="test-item">
+            <strong>7. Console Check:</strong> Open DevTools - should see no worker errors
+        </div>
+    </div>
+
+    <iframe src="http://localhost:4173/" title="BIM Viewer"></iframe>
+
+    <div class="test-list">
+        <h3>📊 Expected Results</h3>
+        <div class="test-item">
+            ✅ <strong>No worker errors</strong> in console during app load
+        </div>
+        <div class="test-item">
+            ✅ <strong>Hover highlights</strong> measurements with lime-green outline
+        </div>
+        <div class="test-item">
+            ✅ <strong>Delete key</strong> removes measurements while hovering
+        </div>
+        <div class="test-item">
+            ✅ <strong>Tools activate</strong> when buttons are clicked
+        </div>
+        <div class="test-item">
+            ✅ <strong>Production build</strong> works same as development
+        </div>
+    </div>
+
+    <script>
+        // Add some debug logging
+        console.log('🔧 Measurement Debug Test Page Loaded');
+        console.log('📍 Testing fixes: enabled measurers, unified key handlers, worker URL');
+        
+        // Monitor for console errors
+        window.addEventListener('error', (e) => {
+            console.error('❌ Runtime Error:', e.error);
+        });
+        
+        // Monitor for key presses
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Delete' || e.code === 'Backspace') {
+                console.log('🔑 Delete key detected in debug page');
+            }
+        });
+    </script>
+</body>
+</html>
