@@ -16,6 +16,7 @@
 **Root Cause:** The `OBC.ModelIdMap` expects fragment IDs (numbers) that correspond to actual IFC elements. The FragmentsModel API provides `getItemsIdsWithGeometry()` method to get these correctly.
 
 **Solution Applied:** Updated `getAllModelIds()` function to use:
+
 ```typescript
 const fragmentIds = await model.getItemsIdsWithGeometry();
 modelIdMap[modelId] = new Set(fragmentIds);

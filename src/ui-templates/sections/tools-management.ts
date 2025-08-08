@@ -32,11 +32,11 @@ export const toolsManagementPanelTemplate: BUI.StatefullComponent<
   // Helper functions to display data
   const displayExtractedData = (data: Record<string, any[]>) => {
     let displayText = "Element Data Extracted:\n\n";
-    let htmlContent = '<div><h4 style="margin: 0 0 0.5rem 0;">Element Data Extracted:</h4>';
+    let htmlContent = '<div style="color: var(--bim-ui_bg-contrast-100);"><h4 style="margin: 0 0 0.5rem 0; color: var(--bim-ui_bg-contrast-100);">Element Data Extracted:</h4>';
     
     for (const [modelId, items] of Object.entries(data)) {
       displayText += `Model ${modelId}: ${items.length} elements\n`;
-      htmlContent += `<div style="margin-bottom: 1rem;"><strong>Model ${modelId}:</strong> ${items.length} elements<br>`;
+      htmlContent += `<div style="margin-bottom: 1rem; color: var(--bim-ui_bg-contrast-100);"><strong style="color: var(--bim-ui_bg-contrast-100);">Model ${modelId}:</strong> ${items.length} elements<br>`;
       
       // Show sample of first few items
       const sampleItems = items.slice(0, 5);
@@ -73,7 +73,7 @@ export const toolsManagementPanelTemplate: BUI.StatefullComponent<
 
   const displayModelProperties = (modelData: any) => {
     let displayText = "Model Properties:\n\n";
-    let htmlContent = '<div><h4 style="margin: 0 0 0.5rem 0;">Model Properties:</h4>';
+    let htmlContent = '<div style="color: var(--bim-ui_bg-contrast-100);"><h4 style="margin: 0 0 0.5rem 0; color: var(--bim-ui_bg-contrast-100);">Model Properties:</h4>';
     
     for (const [modelId, data] of Object.entries(modelData)) {
       const modelInfo = data as any;
@@ -82,12 +82,12 @@ export const toolsManagementPanelTemplate: BUI.StatefullComponent<
       displayText += `  - Visible: ${modelInfo.visible}\n`;
       displayText += `  - Children: ${modelInfo.children}\n\n`;
       
-      htmlContent += `<div style="margin-bottom: 1rem;">
-        <strong>${modelInfo.objectName}</strong> (${modelId})<br>
+      htmlContent += `<div style="margin-bottom: 1rem; color: var(--bim-ui_bg-contrast-100);">
+        <strong style="color: var(--bim-ui_bg-contrast-100);">${modelInfo.objectName}</strong> <span style="color: var(--bim-ui_bg-contrast-80);">(${modelId})</span><br>
         <div style="margin-left: 1rem; font-size: 0.85rem; color: var(--bim-ui_bg-contrast-80);">
-          • Object Name: ${modelInfo.objectName}<br>
-          • Visible: ${modelInfo.visible ? '✅ Yes' : '❌ No'}<br>
-          • Children: ${modelInfo.children}
+          • Object Name: <span style="color: var(--bim-ui_bg-contrast-100);">${modelInfo.objectName}</span><br>
+          • Visible: <span style="color: var(--bim-ui_bg-contrast-100);">${modelInfo.visible ? '✅ Yes' : '❌ No'}</span><br>
+          • Children: <span style="color: var(--bim-ui_bg-contrast-100);">${modelInfo.children}</span>
         </div>
       </div>`;
     }
