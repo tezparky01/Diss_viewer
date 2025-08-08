@@ -33,7 +33,8 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
     const disableAll = (exceptions?: ("clipper" | "length" | "area")[]) => {
       BUI.ContextMenu.removeMenus();
       highlighter.clear("select");
-      highlighter.enabled = false;
+      // Don't disable highlighter - we want model selection to always work
+      // highlighter.enabled = false;
       if (!exceptions?.includes("length")) lengthMeasurer.enabled = false;
       if (!exceptions?.includes("area")) areaMeasurer.enabled = false;
       if (!exceptions?.includes("clipper")) clipper.enabled = false;
@@ -70,7 +71,8 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
         }
       }
       
-      highlighter.enabled = !lengthMeasurer.enabled;
+      // Keep highlighter enabled for model element selection
+      highlighter.enabled = true;
       console.log("Length measurement enabled:", lengthMeasurer.enabled);
       update();
     };
@@ -106,7 +108,8 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
         }
       }
       
-      highlighter.enabled = !areaMeasurer.enabled;
+      // Keep highlighter enabled for model element selection
+      highlighter.enabled = true;
       console.log("Area measurement enabled:", areaMeasurer.enabled);
       update();
     };
@@ -141,7 +144,8 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
         }
       }
       
-      highlighter.enabled = !clipper.enabled;
+      // Keep highlighter enabled for model element selection
+      highlighter.enabled = true;
       console.log("Clipper enabled:", clipper.enabled);
       update();
     };

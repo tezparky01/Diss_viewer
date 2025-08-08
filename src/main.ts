@@ -140,6 +140,9 @@ highlighter.setup({
   },
 });
 
+// Ensure highlighter is enabled for model selection
+highlighter.enabled = true;
+
 // Clipper Setup - following That Open Company methodology
 const clipper = components.get(OBC.Clipper);
 
