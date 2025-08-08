@@ -61,7 +61,9 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
         // Set up the double-click handler according to documentation
         if (world.renderer && world.renderer.three.domElement.parentElement) {
           world.renderer.three.domElement.parentElement.ondblclick = () => {
-            console.log("Double-click detected - creating length measurement");
+            console.log(
+              "Double-click detected - calling length measurement create",
+            );
             lengthMeasurer.create();
           };
           console.log("Set up double-click handler for length measurement");
@@ -95,7 +97,9 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
         // Set up the double-click handler according to documentation
         if (world.renderer && world.renderer.three.domElement.parentElement) {
           world.renderer.three.domElement.parentElement.ondblclick = () => {
-            console.log("Double-click detected - creating area measurement");
+            console.log(
+              "Double-click detected - calling area measurement create",
+            );
             areaMeasurer.create();
           };
           console.log("Set up double-click handler for area measurement");
@@ -123,6 +127,7 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
         }
       } else {
         // Enable the tool and set up double-click to create clip planes
+        // (Clipper requires explicit double-click handling unlike measurements)
         console.log("Enabling clipper tool");
         clipper.enabled = true;
         
@@ -155,7 +160,7 @@ export const viewportGridTemplate: BUI.StatefullComponent<ViewportGridState> = (
       lengthMeasurer.list.clear();
       console.log("Length measurements cleared");
       
-      // Clear all area measurements  
+      // Clear all area measurements
       areaMeasurer.list.clear();
       console.log("Area measurements cleared");
       

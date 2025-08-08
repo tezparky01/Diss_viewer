@@ -195,6 +195,38 @@ console.log("Length measurer initialized:", {
   color: lengthMeasurer.color.getHexString(),
 });
 
+// Override the lines collection behavior to control label visibility
+lengthMeasurer.lines.onItemAdded.add((dimensionLine) => {
+  console.log("Dimension line added to lengthMeasurer.lines");
+  
+  // Check if this is a preview line (distance = 0) and hide its label
+  const line = (dimensionLine as any).line;
+  if (line && line.distance() === 0) {
+    console.log("Hiding label for 0m preview dimension line");
+    (dimensionLine as any).label.visible = false;
+    
+    // Set up a listener to monitor distance changes on this line
+    const checkDistance = () => {
+      const currentDistance = line.distance();
+      if (currentDistance > 0) {
+        console.log("Distance became > 0, showing label");
+        (dimensionLine as any).label.visible = true;
+      } else {
+        (dimensionLine as any).label.visible = false;
+      }
+    };
+    
+    // Check distance periodically while the measurement is being created
+    const intervalId = setInterval(checkDistance, 50);
+    
+    // Clean up the interval after a reasonable time
+    setTimeout(() => {
+      clearInterval(intervalId);
+      console.log("Stopped monitoring dimension line distance");
+    }, 10000); // Stop monitoring after 10 seconds
+  }
+});
+
 lengthMeasurer.list.onItemAdded.add((line) => {
   console.log("Length measurement created");
   
@@ -208,29 +240,30 @@ lengthMeasurer.list.onItemAdded.add((line) => {
     });
   }
   
-  // Set up a short delay to check if measurement is complete
-  setTimeout(() => {
-    const distance = line.distance();
-    console.log("Length measurement distance:", distance);
+  // Always update UI and handle completed measurements
+  const distance = line.distance();
+  console.log("Length measurement distance:", distance);
+  
+  if (distance > 0) {
+    // Valid completed measurement, focus on it
+    const center = new THREE.Vector3();
+    line.getCenter(center);
+    const radius = distance / 3;
+    const sphere = new THREE.Sphere(center, radius);
+    world.camera.controls.fitToSphere(sphere, true);
     
-    if (distance === 0) {
-      // Remove 0m measurements automatically
-      console.log("Removing incomplete 0m length measurement");
-      const lineId = Array.from(lengthMeasurer.list.entries()).find(
-        ([_, l]) => l === line,
-      )?.[0];
-      if (lineId) {
-        lengthMeasurer.list.delete(lineId);
-      }
-    } else {
-      // Valid measurement, focus on it
-      const center = new THREE.Vector3();
-      line.getCenter(center);
-      const radius = distance / 3;
-      const sphere = new THREE.Sphere(center, radius);
-      world.camera.controls.fitToSphere(sphere, true);
+    // Make sure the corresponding dimension line label is visible
+    const dimensionLines = Array.from(lengthMeasurer.lines);
+    const correspondingDimension = dimensionLines.find(
+      (dimLine) => (dimLine as any).line === line,
+    );
+    if (correspondingDimension) {
+      console.log(
+        "Making dimension line label visible for completed measurement",
+      );
+      (correspondingDimension as any).label.visible = true;
     }
-  }, 50); // Very short delay to allow measurement to complete
+  }
   
   // Update UI when measurements change
   const contentGrid = document.getElementById(CONTENT_GRID_ID) as any;
@@ -333,26 +366,8 @@ function clearAllMeasurements() {
   }
 }
 
-// That Open Company tool interaction handlers - controlled by tool enabled state
-viewport.addEventListener("dblclick", () => {
-  console.log("Double-click detected", {
-    clipperEnabled: clipper.enabled,
-    lengthMeasurerEnabled: lengthMeasurer.enabled,
-    areaMeasurerEnabled: areaMeasurer.enabled,
-  });
-  
-  // Only activate tools if they are enabled (via UI buttons)
-  if (clipper.enabled) {
-    console.log("Creating clipping plane...");
-    clipper.create(world);
-  } else if (lengthMeasurer.enabled) {
-    console.log("Creating length measurement...");
-    lengthMeasurer.create();
-  } else if (areaMeasurer.enabled) {
-    console.log("Creating area measurement...");
-    areaMeasurer.create();
-  }
-});
+// That Open Company tool interaction handlers are now managed by UI buttons
+// The double-click handlers are set up in viewport.ts when tools are activated
 
 // Unified keyboard shortcuts for That Open Company tools
 // Using capture phase to work even when UI elements have focus
