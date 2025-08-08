@@ -26,15 +26,21 @@ type ToolsManagement = {
   state: TEMPLATES.ToolsManagementPanelState;
 };
 
+type Quality = {
+  name: "quality";
+  state: TEMPLATES.QualityPanelState;
+};
+
 export type ContentGridElements = [
   Viewer,
   Models,
   ElementData,
   Viewpoints,
   ToolsManagement,
+  Quality,
 ];
 
-export type ContentGridLayouts = ["Viewer"];
+export type ContentGridLayouts = ["Viewer", "Quality"];
 
 export interface ContentGridState {
   components: OBC.Components;
@@ -224,6 +230,10 @@ export const contentGridTemplate: BUI.StatefullComponent<ContentGridState> = (
         template: TEMPLATES.toolsManagementPanelTemplate,
         initialState: { components, world: world! },
       },
+      quality: {
+        template: TEMPLATES.qualityPanelTemplate,
+        initialState: { components, world },
+      },
       viewer: state.viewportTemplate,
     };
 
@@ -239,6 +249,12 @@ export const contentGridTemplate: BUI.StatefullComponent<ContentGridState> = (
           "models viewer elementData" 1fr
           "viewpoints viewer toolsManagement" 1fr
           /${leftSize} 1fr ${rightSize}
+        `,
+      },
+      Quality: {
+        template: `
+          "quality viewer viewer" 1fr
+          /400px 1fr 1fr
         `,
       },
     };
