@@ -1,6 +1,8 @@
 import * as BUI from "@thatopen/ui";
 import * as OBC from "@thatopen/components";
 import * as OBF from "@thatopen/components-front";
+import * as THREE from "three";
+import * as FRAGS from "@thatopen/fragments";
 import { ITP_STEPS } from "./itp-model";
 import { db } from "./itp-db";
 import {
@@ -22,20 +24,123 @@ import type { ElementSelection } from "./itp-model";
 async function getCurrentSelection(
   components: OBC.Components,
 ): Promise<ElementSelection[]> {
-  const highlighter = components.get(OBF.Highlighter);
-  const map = highlighter.selection.select; // ModelIdMap
-  // flatten to array for linking/status updates
-  const arr: ElementSelection[] = [];
-  for (const [modelId, ids] of Object.entries(map)) {
-    for (const id of ids as Set<number>) {
-      arr.push({ modelId, expressID: id });
+  try {
+    console.log("🔍 Getting current selection...");
+
+    const highlighter = components.get(OBF.Highlighter);
+
+    // Check if highlighter is setup
+    if (!highlighter.isSetup) {
+      console.log("⚠️ Highlighter not setup, setting up now...");
+      const worlds = components.get(OBC.Worlds);
+      const world = worlds.list.values().next().value;
+      if (world) {
+        highlighter.setup({
+          world,
+          selectMaterialDefinition: {
+            color: new THREE.Color("#BCF124"),
+            opacity: 1,
+            transparent: false,
+            renderedFaces: FRAGS.RenderedFaces.ONE,
+          },
+        });
+      }
     }
+
+    const selectName = highlighter.config.selectName || "select";
+    const selectionMap = highlighter.selection[selectName];
+
+    console.log(`🎯 Using select name: ${selectName}`);
+    console.log("📊 Selection map:", selectionMap);
+
+    const arr: ElementSelection[] = [];
+
+    if (selectionMap && typeof selectionMap === "object") {
+      for (const [modelId, ids] of Object.entries(selectionMap)) {
+        if (ids && ids instanceof Set) {
+          console.log(
+            `🏗️ Processing model ${modelId} with ${ids.size} elements`,
+          );
+          for (const id of ids) {
+            arr.push({
+              modelId,
+              expressID: Number(id),
+            });
+            console.log(
+              `📍 Found selection: modelId=${modelId}, expressID=${id}`,
+            );
+          }
+        }
+      }
+    }
+
+    console.log(`✅ Total selected elements: ${arr.length}`);
+    return arr;
+  } catch (error) {
+    console.error("❌ Error getting current selection:", error);
+    return [];
   }
-  // (optional) resolve GUIDs using fragments/groups if you need them
-  return arr;
 }
 
 export default function QualityPanel(components: OBC.Components) {
+  // Initialize highlighter and setup quality styles
+  const initQualityHighlighter = async () => {
+    try {
+      const highlighter = components.get(OBF.Highlighter);
+      
+      if (!highlighter.isSetup) {
+        const worlds = components.get(OBC.Worlds);
+        const world = worlds.list.values().next().value;
+        if (world) {
+          highlighter.setup({
+            world,
+            selectMaterialDefinition: {
+              color: new THREE.Color("#BCF124"),
+              opacity: 1,
+              transparent: false,
+              renderedFaces: FRAGS.RenderedFaces.ONE,
+            },
+          });
+        }
+      }
+      
+      // Setup quality status highlight styles
+      highlighter.styles.set("quality-pass", {
+        color: new THREE.Color("#4CAF50"), // Green
+        opacity: 0.8,
+        transparent: true,
+        renderedFaces: FRAGS.RenderedFaces.ONE,
+      });
+      
+      highlighter.styles.set("quality-fail", {
+        color: new THREE.Color("#F44336"), // Red
+        opacity: 0.8,
+        transparent: true,
+        renderedFaces: FRAGS.RenderedFaces.ONE,
+      });
+      
+      highlighter.styles.set("quality-open", {
+        color: new THREE.Color("#FF9800"), // Orange
+        opacity: 0.8,
+        transparent: true,
+        renderedFaces: FRAGS.RenderedFaces.ONE,
+      });
+      
+      highlighter.styles.set("quality-na", {
+        color: new THREE.Color("#9E9E9E"), // Gray
+        opacity: 0.6,
+        transparent: true,
+        renderedFaces: FRAGS.RenderedFaces.ONE,
+      });
+      
+      console.log("✅ Quality highlighter styles initialized");
+    } catch (error) {
+      console.error("❌ Failed to initialize quality highlighter:", error);
+    }
+  };
+
+  // Initialize on creation
+  initQualityHighlighter();
   // seed steps once
   (async () => {
     const count = await db.itp_steps.count();
@@ -119,14 +224,22 @@ export default function QualityPanel(components: OBC.Components) {
 
   // Listen for selection changes
   const highlighter = components.get(OBF.Highlighter);
-  if (highlighter.events && highlighter.events.select) {
-    highlighter.events.select.onHighlight.add(() => {
-      updateSelectionInfo();
-    });
-    highlighter.events.select.onClear.add(() => {
-      updateSelectionInfo();
-    });
+  
+  // Try multiple approaches to listen for selection changes
+  const updateSelectionDebounced = () => {
+    setTimeout(updateSelectionInfo, 100); // Debounce to avoid rapid updates
+  };
+  
+  // Method 1: Try the events property if it exists
+  if (highlighter.events?.select?.onHighlight) {
+    highlighter.events.select.onHighlight.add(updateSelectionDebounced);
   }
+  if (highlighter.events?.select?.onClear) {
+    highlighter.events.select.onClear.add(updateSelectionDebounced);
+  }
+  
+  // Method 2: Fallback - poll for changes every 2 seconds
+  setInterval(updateSelectionInfo, 2000);
 
   // Initialize selection info
   updateSelectionInfo();
@@ -134,18 +247,32 @@ export default function QualityPanel(components: OBC.Components) {
   // Link button
   const linkBtn = BUI.Component.create(() => {
     const onClick = async () => {
+      console.log("🔗 Link button clicked");
       if (!selectedStep) {
-        console.warn("Please select a step first");
+        console.warn("❌ No step selected");
         return;
       }
+      console.log(`📋 Selected step: ${selectedStep}`);
+      
       const selection = await getCurrentSelection(components);
       if (selection.length === 0) {
-        console.warn("Please select elements in the 3D viewer first");
+        console.warn("❌ No elements selected in 3D viewer");
         return;
       }
-      await linkToStep(selectedStep, selection);
-      await repaintForStep(components, selectedStep);
-      await updateStepsTable();
+      
+      console.log(
+        `🎯 Linking ${selection.length} elements to step ${selectedStep}`,
+      );
+      try {
+        await linkToStep(selectedStep, selection);
+        console.log("✅ Successfully linked elements to step");
+        await repaintForStep(components, selectedStep);
+        console.log("🎨 Repainted elements for step");
+        await updateStepsTable();
+        console.log("📊 Updated steps table");
+      } catch (error) {
+        console.error("❌ Error linking elements:", error);
+      }
     };
     return BUI.html`<bim-button label="Link Selection to Step" @click=${onClick}></bim-button>`;
   });
@@ -368,7 +495,7 @@ export default function QualityPanel(components: OBC.Components) {
   // Layout
   return BUI.Component.create(
     () => BUI.html`
-    <bim-panel label="Quality Inspection & Test Plan">
+    <bim-panel label="Quality Inspection & Test Plan" style="height: 100vh; overflow-y: auto;">
       <bim-panel-section label="Instructions" style="padding: 0.5rem;">
         <div style="font-size: 0.875rem; color: var(--bim-ui_main-contrast); line-height: 1.4;">
           <p><strong>Workflow:</strong></p>

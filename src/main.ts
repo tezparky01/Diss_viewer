@@ -504,7 +504,7 @@ contentGrid.addEventListener("layoutchange", () => {
 
 const contentGridIcons: Record<TEMPLATES.ContentGridLayouts[number], string> = {
   Viewer: appIcons.MODEL,
-  Quality: "🏗️",
+  Quality: appIcons.QUALITY,
 };
 
 // App Grid Setup
