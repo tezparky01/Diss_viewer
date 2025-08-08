@@ -1,26 +1,27 @@
 # FragmentsManager Data Extraction - Status Update
 
-## ✅ Working Features:
+## ✅ FIXED - Working Features:
 
-- **Export All Data** - Successfully exports model metadata and measurements to JSON
-- **Model Properties** - Shows basic model information (name, visibility, children count)
-- **UI Integration** - Buttons activate/deactivate when models are loaded/removed
+- **Extract Elements** ✅ - Now uses proper `model.getItemsIdsWithGeometry()` API for correct fragment ID enumeration
+- **Model Properties** ✅ - Shows detailed model information (name, visibility, children count)
+- **Export All Data** ✅ - Successfully exports model metadata, element data, and measurements to JSON
+- **UI Integration** ✅ - Buttons activate/deactivate when models are loaded/removed
 
-## ⚠️ Current Limitations:
+## 🔧 **Recent Fix Applied:**
 
-### **Extract Elements** Issue:
+### **Extract Elements - RESOLVED** ✅
 
-The `fragments.getData(modelIdMap)` method requires specific fragment IDs that are not easily accessible through the current FragmentsModel API.
+**Problem:** The `fragments.getData(modelIdMap)` method was receiving incorrect fragment IDs because the previous implementation was using child indices instead of actual fragment IDs.
 
-**Root Cause:** The `OBC.ModelIdMap` expects fragment IDs (numbers) that correspond to actual IFC elements, but the FragmentsModel doesn't expose these IDs directly through its public API.
+**Root Cause:** The `OBC.ModelIdMap` expects fragment IDs (numbers) that correspond to actual IFC elements. The FragmentsModel API provides `getItemsIdsWithGeometry()` method to get these correctly.
 
-**Current Workaround:** The "Extract Elements" button now shows basic model structure information instead of detailed element data.
+**Solution Applied:** Updated `getAllModelIds()` function to use:
+```typescript
+const fragmentIds = await model.getItemsIdsWithGeometry();
+modelIdMap[modelId] = new Set(fragmentIds);
+```
 
-### **Potential Solutions:**
-
-1. **Use IFC Loader directly** - Access the raw IFC data through the IfcLoader component
-2. **Alternative API exploration** - Find the correct way to enumerate fragment IDs
-3. **Component documentation** - Need access to ThatOpen Components detailed API docs
+This correctly gets all fragment IDs that have geometry data, which can then be used with `fragments.getData(modelIdMap)` to extract element properties.
 
 ## 🎯 **What Works Right Now:**
 
