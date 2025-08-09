@@ -47,7 +47,9 @@ export async function repaintForStep(
     }
 
     // Add a small delay to ensure database writes are complete
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), 10);
+    });
 
     const rows = await db.inspections.where({ stepId }).toArray();
     console.log(

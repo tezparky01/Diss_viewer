@@ -15,7 +15,7 @@ import {
 import { repaintForStep, clearAllHighlighting } from "./itp-painter";
 import type { ElementSelection } from "./itp-model";
 
-// helper: current viewport selection -> array of { modelId, expressID, ifcGuid? }
+// helper: current viewport selection -> array of { modelId, expressID, guid }
 async function getCurrentSelection(
   components: OBC.Components,
 ): Promise<ElementSelection[]> {
@@ -23,6 +23,7 @@ async function getCurrentSelection(
     console.log("🔍 Getting current selection...");
 
     const highlighter = components.get(OBF.Highlighter);
+    const fragments = components.get(OBC.FragmentsManager);
 
     // Check if highlighter is setup
     if (!highlighter.isSetup) {
@@ -51,19 +52,29 @@ async function getCurrentSelection(
     const arr: ElementSelection[] = [];
 
     if (selectionMap && typeof selectionMap === "object") {
+      // Convert selection map to GUIDs to get the actual element GUIDs
+      const guids = await fragments.modelIdMapToGuids(selectionMap);
+      console.log(`🆔 Retrieved ${guids.length} GUIDs from selection`);
+
+      // Build array with both modelId/expressID and GUID information
+      let guidIndex = 0;
       for (const [modelId, ids] of Object.entries(selectionMap)) {
         if (ids && ids instanceof Set) {
           console.log(
             `🏗️ Processing model ${modelId} with ${ids.size} elements`,
           );
           for (const id of ids) {
+            const guid =
+              guidIndex < guids.length ? guids[guidIndex] : undefined;
             arr.push({
               modelId,
               expressID: Number(id),
+              guid,
             });
             console.log(
-              `📍 Found selection: modelId=${modelId}, expressID=${id}`,
+              `📍 Found selection: modelId=${modelId}, expressID=${id}, guid=${guid}`,
             );
+            guidIndex++;
           }
         }
       }
@@ -82,7 +93,7 @@ export default function QualityPanel(components: OBC.Components) {
   const initQualityHighlighter = async () => {
     try {
       const highlighter = components.get(OBF.Highlighter);
-      
+
       if (!highlighter.isSetup) {
         const worlds = components.get(OBC.Worlds);
         const world = worlds.list.values().next().value;
@@ -98,7 +109,7 @@ export default function QualityPanel(components: OBC.Components) {
           });
         }
       }
-      
+
       // Setup quality status highlight styles
       highlighter.styles.set("quality-pass", {
         color: new THREE.Color("#4CAF50"), // Green
@@ -106,28 +117,28 @@ export default function QualityPanel(components: OBC.Components) {
         transparent: true,
         renderedFaces: FRAGS.RenderedFaces.ONE,
       });
-      
+
       highlighter.styles.set("quality-fail", {
         color: new THREE.Color("#F44336"), // Red
         opacity: 0.8,
         transparent: true,
         renderedFaces: FRAGS.RenderedFaces.ONE,
       });
-      
+
       highlighter.styles.set("quality-open", {
         color: new THREE.Color("#0080FF"), // Modern electric blue
         opacity: 0.6,
         transparent: true,
         renderedFaces: FRAGS.RenderedFaces.ONE,
       });
-      
+
       highlighter.styles.set("quality-na", {
         color: new THREE.Color("#9E9E9E"), // Gray
         opacity: 0.6,
         transparent: true,
         renderedFaces: FRAGS.RenderedFaces.ONE,
       });
-      
+
       console.log("✅ Quality highlighter styles initialized");
     } catch (error) {
       console.error("❌ Failed to initialize quality highlighter:", error);
@@ -136,7 +147,7 @@ export default function QualityPanel(components: OBC.Components) {
 
   // Initialize on creation
   initQualityHighlighter();
-  
+
   // Migrate existing "Open" status to "Ready for Inspection"
   (async () => {
     try {
@@ -161,7 +172,7 @@ export default function QualityPanel(components: OBC.Components) {
       console.error("❌ Migration failed:", error);
     }
   })();
-  
+
   // seed steps once
   (async () => {
     const count = await db.itp_steps.count();
@@ -210,9 +221,9 @@ export default function QualityPanel(components: OBC.Components) {
 
     // Store current selection before updating data
     const currentSelectedStep = selectedStep;
-    
+
     stepsTable.data = rows;
-    
+
     // Restore selection after data update if we had a selected step
     if (currentSelectedStep) {
       setTimeout(() => {
@@ -249,10 +260,10 @@ export default function QualityPanel(components: OBC.Components) {
       }>;
     }>;
     const rowData = event.detail.data;
-    
+
     console.log("✅ Selected row data:", rowData);
     console.log("🔍 Step property:", rowData.Step);
-    
+
     if (rowData.Step) {
       const newSelectedStep = rowData.Step;
       console.log(
@@ -294,12 +305,12 @@ export default function QualityPanel(components: OBC.Components) {
 
   // Listen for selection changes
   const highlighter = components.get(OBF.Highlighter);
-  
+
   // Try multiple approaches to listen for selection changes
   const updateSelectionDebounced = () => {
     setTimeout(updateSelectionInfo, 100); // Debounce to avoid rapid updates
   };
-  
+
   // Method 1: Try the events property if it exists
   if (highlighter.events?.select?.onHighlight) {
     highlighter.events.select.onHighlight.add(updateSelectionDebounced);
@@ -307,7 +318,7 @@ export default function QualityPanel(components: OBC.Components) {
   if (highlighter.events?.select?.onClear) {
     highlighter.events.select.onClear.add(updateSelectionDebounced);
   }
-  
+
   // Method 2: Fallback - poll for changes every 2 seconds
   setInterval(updateSelectionInfo, 2000);
 
@@ -323,32 +334,32 @@ export default function QualityPanel(components: OBC.Components) {
         return;
       }
       console.log(`📋 Selected step: ${selectedStep}`);
-      
+
       const selection = await getCurrentSelection(components);
       if (selection.length === 0) {
         console.warn("❌ No elements selected in 3D viewer");
         return;
       }
-      
+
       console.log(
         `🎯 Linking ${selection.length} elements to step ${selectedStep}`,
       );
-      
+
       // Store the current step to restore it after operations
       const currentStep = selectedStep;
-      
+
       try {
         await linkToStep(selectedStep, selection);
         console.log("✅ Successfully linked elements to step");
-        
+
         // Restore the selected step before repainting (in case it got cleared)
         selectedStep = currentStep;
-        
+
         await repaintForStep(components, selectedStep);
         console.log("🎨 Repainted elements for step");
         await updateStepsTable();
         console.log("📊 Updated steps table");
-        
+
         // Ensure the table row stays selected after operations
         setTimeout(() => {
           if (selectedStep !== currentStep) {
@@ -615,12 +626,12 @@ export default function QualityPanel(components: OBC.Components) {
     panelSections.forEach((section) => {
       // Method 1: Set attribute
       section.setAttribute("collapsed", "");
-      
+
       // Method 2: Set property if available
       if ("collapsed" in section) {
         (section as any).collapsed = true;
       }
-      
+
       // Method 3: Set CSS custom property
       (section as HTMLElement).style.setProperty(
         "--bim-panel-section--content-height",
