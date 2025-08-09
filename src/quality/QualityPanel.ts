@@ -522,9 +522,9 @@ export default function QualityPanel(components: OBC.Components) {
       a.click();
     };
     return BUI.html`
-      <div style="display:flex; gap:.5rem">
-        <bim-button label="Export CSV" @click=${onCsv}></bim-button>
-        <bim-button label="Export JSON" @click=${onJson}></bim-button>
+      <div style="display:flex; gap:1rem">
+        <div><bim-button label="Export CSV" @click=${onCsv}></bim-button></div>
+        <div><bim-button label="Export JSON" @click=${onJson}></bim-button></div>
       </div>`;
   });
 
@@ -556,7 +556,7 @@ export default function QualityPanel(components: OBC.Components) {
   // Layout - Create the panel component
   const panelComponent = BUI.Component.create(
     () => BUI.html`
-    <bim-panel label="Quality Inspection & Test Plan" style="height: 100vh; overflow-y: auto;">
+    <bim-panel class="quality-panel" label="Quality Inspection & Test Plan" style="height: 100vh; overflow-y: auto;">
       <bim-panel-section collapsed label="Instructions" style="padding: 0.5rem;">
         <div style="font-size: 0.875rem; color: var(--bim-ui_main-contrast); line-height: 1.4;">
           <p><strong>Workflow:</strong></p>
@@ -579,20 +579,31 @@ export default function QualityPanel(components: OBC.Components) {
       </bim-panel-section>
 
       <bim-panel-section collapsed label="Link & Status">
-        <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom: 1rem;">
-          ${linkBtn}
-        </div>
-        <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom: 1rem;">
-          ${passBtn} ${failBtn} ${openBtn} ${naBtn}
-        </div>
-        <div style="display:flex; gap:.5rem;">
-          ${clearBtn}
+        <div style="display: flex; flex-direction: column;">
+          <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom: 1.5rem !important;">
+            <div>${linkBtn}</div>
+          </div>
+          <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom: 1.5rem !important;">
+            <div>${passBtn}</div>
+            <div>${failBtn}</div>
+            <div>${openBtn}</div>
+            <div>${naBtn}</div>
+          </div>
+          <div style="display:flex; gap:1rem;">
+            <div>${clearBtn}</div>
+          </div>
         </div>
       </bim-panel-section>
 
       <bim-panel-section collapsed label="Import/Export">
-        ${csvImportBtn}
-        ${exportBtns}
+        <div style="display: flex; flex-direction: column;">
+          <div style="margin-bottom: 1.5rem !important;">
+            ${csvImportBtn}
+          </div>
+          <div>
+            ${exportBtns}
+          </div>
+        </div>
       </bim-panel-section>
     </bim-panel>
   `,
