@@ -59,9 +59,9 @@ export async function repaintForStep(
         continue;
     }
 
-    if (target) {
+    if (target && r.modelId) {
       target[r.modelId] ??= new Set<number>();
-      target[r.modelId].add(r.expressID);
+      target[r.modelId].add(r.expressID!);
     }
   }
 

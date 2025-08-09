@@ -10,10 +10,10 @@ export class ItpDB extends Dexie {
 
   constructor() {
     super("itp-db");
-    this.version(1).stores({
+    this.version(2).stores({
       itp_steps: "&stepId, name",
       inspections:
-        "&pk, stepId, status, modelKey, inspectedAt, [stepId+status]",
+        "&pk, stepId, status, guid, inspectedAt, [stepId+status], [stepId+guid]",
     });
   }
 }

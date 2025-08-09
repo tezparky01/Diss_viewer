@@ -31,24 +31,26 @@ export const ITP_STEPS = [
 export type Status = "Open" | "Pass" | "Fail" | "NA";
 
 export type InspectionRow = {
-  // one row = one element in one step
-  pk: string; // `${stepId}#${modelId}:${expressID}`
+  // GUID-based approach (recommended by TOC)
+  pk: string; // `${stepId}#${guid}`
   stepId: string;
-  modelId: string;
-  expressID: number;
-  ifcGuid?: string;
+  guid: string; // IFC Global ID (stable identifier)
   status: Status;
   notes?: string;
   inspector?: string;
   inspectedAt: string; // ISO
-  modelKey: string; // `${modelId}:${expressID}` (index convenience)
+  
+  // Legacy fields for compatibility/export (optional)
+  modelId?: string;
+  expressID?: number;
+  modelKey?: string; // `${modelId}:${expressID}` (index convenience)
 };
 
 // Helper type for element selection
 export type ElementSelection = {
   modelId: string;
   expressID: number;
-  ifcGuid?: string;
+  guid?: string; // IFC Global ID
 };
 
 // Statistics type for step counts

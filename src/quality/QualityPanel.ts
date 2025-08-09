@@ -13,11 +13,6 @@ import {
   getStepStatistics,
 } from "./itp-service";
 import { repaintForStep, clearAllHighlighting } from "./itp-painter";
-import {
-  getPileElements,
-  getColumnElements,
-  selectStructuralElements,
-} from "./structural-selector";
 import type { ElementSelection } from "./itp-model";
 
 // helper: current viewport selection -> array of { modelId, expressID, ifcGuid? }
@@ -193,12 +188,28 @@ export default function QualityPanel(components: OBC.Components) {
   // Selected step state
   let selectedStep: string | null = null;
 
-  stepsTable.addEventListener("cellclick", () => {
-    const chosen = [...stepsTable.selection][0];
-    if (chosen && chosen.Step) {
-      selectedStep = chosen.Step;
-      repaintForStep(components, chosen.Step);
+  // Enhanced table row selection handling using rowselected event
+  stepsTable.addEventListener("rowselected", (e) => {
+    console.log("🖱️ Row selected event fired");
+    const event = e as CustomEvent<{ data: Partial<{ Step: string; Name: string; Pass: number; Fail: number; Open: number; NA: number; Total: number; }> }>;
+    const rowData = event.detail.data;
+    
+    console.log("✅ Selected row data:", rowData);
+    console.log("🔍 Step property:", rowData.Step);
+    
+    if (rowData.Step) {
+      selectedStep = rowData.Step;
+      console.log(`✅ Selected step: ${rowData.Step}`);
+      repaintForStep(components, rowData.Step);
+    } else {
+      console.warn("❌ No Step property found in selected row");
+      selectedStep = null;
     }
+  });
+
+  stepsTable.addEventListener("rowdeselected", () => {
+    console.log("🖱️ Row deselected");
+    selectedStep = null;
   });
 
   // Selection info panel
@@ -358,34 +369,7 @@ export default function QualityPanel(components: OBC.Components) {
     return BUI.html`<bim-button label="Clear Highlighting" @click=${onClick}></bim-button>`;
   });
 
-  // Bulk selection buttons
-  const selectPilesBtn = BUI.Component.create(() => {
-    const onClick = async () => {
-      console.log("Attempting to select all piles...");
-      const piles = await getPileElements(components);
-      if (piles.length > 0) {
-        await selectStructuralElements(components, piles);
-        console.log(`Selected ${piles.length} pile elements`);
-      } else {
-        console.log("No pile elements found or auto-selection not available");
-      }
-    };
-    return BUI.html`<bim-button label="Select Piles" @click=${onClick}></bim-button>`;
-  });
-
-  const selectColumnsBtn = BUI.Component.create(() => {
-    const onClick = async () => {
-      console.log("Attempting to select all columns...");
-      const columns = await getColumnElements(components);
-      if (columns.length > 0) {
-        await selectStructuralElements(components, columns);
-        console.log(`Selected ${columns.length} column elements`);
-      } else {
-        console.log("No column elements found or auto-selection not available");
-      }
-    };
-    return BUI.html`<bim-button label="Select Columns" @click=${onClick}></bim-button>`;
-  });
+  // Bulk selection buttons removed per user request
 
   // CSV Import functionality
   const csvImportBtn = BUI.Component.create(() => {
@@ -511,10 +495,6 @@ export default function QualityPanel(components: OBC.Components) {
 
       <bim-panel-section label="Selection">
         ${selectionInfo}
-        <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-top: 0.5rem;">
-          ${selectPilesBtn}
-          ${selectColumnsBtn}
-        </div>
       </bim-panel-section>
 
       <bim-panel-section label="ITP Steps (click to select)">

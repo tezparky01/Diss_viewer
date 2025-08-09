@@ -8,17 +8,17 @@ export async function linkToStep(
 ) {
   const now = new Date().toISOString();
   await db.transaction("rw", db.inspections, async () => {
-    for (const { modelId, expressID, ifcGuid } of selection) {
+    for (const { modelId, expressID, guid } of selection) {
       const modelKey = `${modelId}:${expressID}`;
       const pk = `${stepId}#${modelKey}`;
       const row: InspectionRow = {
         pk,
         stepId,
-        modelId,
-        expressID,
-        ifcGuid,
+        guid: guid || "",
         status: "Open",
         inspectedAt: now,
+        modelId,
+        expressID,
         modelKey,
       };
       await db.inspections.put(row);
@@ -63,13 +63,13 @@ export async function exportCSV(): Promise<{
     ...steps.map((s) => `${s.stepId},"${s.name.replace(/"/g, '""')}"`),
   ].join("\n");
   const head =
-    "stepId,modelId,expressID,ifcGuid,status,inspectedAt,inspector,notes";
+    "stepId,modelId,expressID,guid,status,inspectedAt,inspector,notes";
   const rows = inspections.map((r) =>
     [
       r.stepId,
       r.modelId,
       r.expressID,
-      r.ifcGuid ?? "",
+      r.guid ?? "",
       r.status,
       r.inspectedAt,
       r.inspector ?? "",
