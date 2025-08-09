@@ -15,7 +15,7 @@ export async function linkToStep(
         pk,
         stepId,
         guid: guid || "",
-        status: "Open",
+        status: "Ready for Inspection",
         inspectedAt: now,
         modelId,
         expressID,
@@ -94,7 +94,7 @@ export async function getStepStatistics(stepId: string) {
 
   for (const row of rows) {
     switch (row.status) {
-      case "Open":
+      case "Ready for Inspection":
         stats.open++;
         break;
       case "Pass":

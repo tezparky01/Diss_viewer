@@ -28,7 +28,7 @@ export const ITP_STEPS = [
   },
 ] as const;
 
-export type Status = "Open" | "Pass" | "Fail" | "NA";
+export type Status = "Ready for Inspection" | "Pass" | "Fail" | "NA";
 
 export type InspectionRow = {
   // GUID-based approach (recommended by TOC)

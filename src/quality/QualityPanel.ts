@@ -115,8 +115,8 @@ export default function QualityPanel(components: OBC.Components) {
       });
       
       highlighter.styles.set("quality-open", {
-        color: new THREE.Color("#FF9800"), // Orange
-        opacity: 0.8,
+        color: new THREE.Color("#0080FF"), // Modern electric blue
+        opacity: 0.6,
         transparent: true,
         renderedFaces: FRAGS.RenderedFaces.ONE,
       });
@@ -136,6 +136,32 @@ export default function QualityPanel(components: OBC.Components) {
 
   // Initialize on creation
   initQualityHighlighter();
+  
+  // Migrate existing "Open" status to "Ready for Inspection"
+  (async () => {
+    try {
+      const openRecords = await db.inspections
+        .where("status")
+        .equals("Open")
+        .toArray();
+      if (openRecords.length > 0) {
+        console.log(
+          `🔄 Migrating ${openRecords.length} records from "Open" to "Ready for Inspection"`,
+        );
+        await db.transaction("rw", db.inspections, async () => {
+          for (const record of openRecords) {
+            await db.inspections.update(record.pk, {
+              status: "Ready for Inspection" as any,
+            });
+          }
+        });
+        console.log("✅ Migration completed");
+      }
+    } catch (error) {
+      console.error("❌ Migration failed:", error);
+    }
+  })();
+  
   // seed steps once
   (async () => {
     const count = await db.itp_steps.count();
@@ -159,6 +185,9 @@ export default function QualityPanel(components: OBC.Components) {
   stepsTable.selectableRows = true;
   stepsTable.style.height = "300px";
 
+  // Selected step state
+  let selectedStep: string | null = null;
+
   // Function to update the steps table with statistics
   const updateStepsTable = async () => {
     const steps = await db.itp_steps.toArray();
@@ -179,28 +208,58 @@ export default function QualityPanel(components: OBC.Components) {
       });
     }
 
+    // Store current selection before updating data
+    const currentSelectedStep = selectedStep;
+    
     stepsTable.data = rows;
+    
+    // Restore selection after data update if we had a selected step
+    if (currentSelectedStep) {
+      setTimeout(() => {
+        // Find the row with the matching step and select it
+        const tableRows = stepsTable.querySelectorAll("tr");
+        for (const row of tableRows) {
+          const stepCell = row.querySelector("td:first-child");
+          if (stepCell && stepCell.textContent === currentSelectedStep) {
+            (row as any).selected = true;
+            break;
+          }
+        }
+        // Ensure our local state is preserved
+        selectedStep = currentSelectedStep;
+      }, 50);
+    }
   };
 
   // Initial load
   updateStepsTable();
 
-  // Selected step state
-  let selectedStep: string | null = null;
-
   // Enhanced table row selection handling using rowselected event
   stepsTable.addEventListener("rowselected", (e) => {
     console.log("🖱️ Row selected event fired");
-    const event = e as CustomEvent<{ data: Partial<{ Step: string; Name: string; Pass: number; Fail: number; Open: number; NA: number; Total: number; }> }>;
+    const event = e as CustomEvent<{
+      data: Partial<{
+        Step: string;
+        Name: string;
+        Pass: number;
+        Fail: number;
+        Open: number;
+        NA: number;
+        Total: number;
+      }>;
+    }>;
     const rowData = event.detail.data;
     
     console.log("✅ Selected row data:", rowData);
     console.log("🔍 Step property:", rowData.Step);
     
     if (rowData.Step) {
-      selectedStep = rowData.Step;
-      console.log(`✅ Selected step: ${rowData.Step}`);
-      repaintForStep(components, rowData.Step);
+      const newSelectedStep = rowData.Step;
+      console.log(
+        `✅ Setting selected step: ${newSelectedStep} (was: ${selectedStep})`,
+      );
+      selectedStep = newSelectedStep;
+      repaintForStep(components, newSelectedStep);
     } else {
       console.warn("❌ No Step property found in selected row");
       selectedStep = null;
@@ -208,7 +267,7 @@ export default function QualityPanel(components: OBC.Components) {
   });
 
   stepsTable.addEventListener("rowdeselected", () => {
-    console.log("🖱️ Row deselected");
+    console.log("🖱️ Row deselected - clearing selected step");
     selectedStep = null;
   });
 
@@ -274,15 +333,33 @@ export default function QualityPanel(components: OBC.Components) {
       console.log(
         `🎯 Linking ${selection.length} elements to step ${selectedStep}`,
       );
+      
+      // Store the current step to restore it after operations
+      const currentStep = selectedStep;
+      
       try {
         await linkToStep(selectedStep, selection);
         console.log("✅ Successfully linked elements to step");
+        
+        // Restore the selected step before repainting (in case it got cleared)
+        selectedStep = currentStep;
+        
         await repaintForStep(components, selectedStep);
         console.log("🎨 Repainted elements for step");
         await updateStepsTable();
         console.log("📊 Updated steps table");
+        
+        // Ensure the table row stays selected after operations
+        setTimeout(() => {
+          if (selectedStep !== currentStep) {
+            console.log(`🔄 Restoring step selection: ${currentStep}`);
+            selectedStep = currentStep;
+          }
+        }, 100);
       } catch (error) {
         console.error("❌ Error linking elements:", error);
+        // Restore step selection even if there was an error
+        selectedStep = currentStep;
       }
     };
     return BUI.html`<bim-button label="Link Selection to Step" @click=${onClick}></bim-button>`;
@@ -304,7 +381,7 @@ export default function QualityPanel(components: OBC.Components) {
       await repaintForStep(components, selectedStep);
       await updateStepsTable();
     };
-    return BUI.html`<bim-button label="Set Pass" style="background: var(--bim-ui_accent-base);" @click=${onClick}></bim-button>`;
+    return BUI.html`<bim-button label="Set Pass" style="background: #4CAF50; color: white;" @click=${onClick}></bim-button>`;
   });
 
   const failBtn = BUI.Component.create(() => {
@@ -322,7 +399,7 @@ export default function QualityPanel(components: OBC.Components) {
       await repaintForStep(components, selectedStep);
       await updateStepsTable();
     };
-    return BUI.html`<bim-button label="Set Fail" style="background: #aa0000; color: white;" @click=${onClick}></bim-button>`;
+    return BUI.html`<bim-button label="Set Fail" style="background: #F44336; color: white;" @click=${onClick}></bim-button>`;
   });
 
   const openBtn = BUI.Component.create(() => {
@@ -336,11 +413,11 @@ export default function QualityPanel(components: OBC.Components) {
         console.warn("Please select elements in the 3D viewer first");
         return;
       }
-      await setStatus(selectedStep, selection, "Open");
+      await setStatus(selectedStep, selection, "Ready for Inspection");
       await repaintForStep(components, selectedStep);
       await updateStepsTable();
     };
-    return BUI.html`<bim-button label="Set Open" @click=${onClick}></bim-button>`;
+    return BUI.html`<bim-button label="Ready for Inspection" style="background: #0080FF; color: white;" @click=${onClick}></bim-button>`;
   });
 
   const naBtn = BUI.Component.create(() => {
@@ -358,7 +435,7 @@ export default function QualityPanel(components: OBC.Components) {
       await repaintForStep(components, selectedStep);
       await updateStepsTable();
     };
-    return BUI.html`<bim-button label="Set N/A" style="background: #ffaa00; color: black;" @click=${onClick}></bim-button>`;
+    return BUI.html`<bim-button label="Set N/A" style="background: #9E9E9E; color: white;" @click=${onClick}></bim-button>`;
   });
 
   // Clear highlighting button
@@ -476,32 +553,32 @@ export default function QualityPanel(components: OBC.Components) {
   // Add keyboard listener when panel is active
   document.addEventListener("keydown", handleKeyPress);
 
-  // Layout
-  return BUI.Component.create(
+  // Layout - Create the panel component
+  const panelComponent = BUI.Component.create(
     () => BUI.html`
     <bim-panel label="Quality Inspection & Test Plan" style="height: 100vh; overflow-y: auto;">
-      <bim-panel-section label="Instructions" style="padding: 0.5rem;">
+      <bim-panel-section collapsed label="Instructions" style="padding: 0.5rem;">
         <div style="font-size: 0.875rem; color: var(--bim-ui_main-contrast); line-height: 1.4;">
           <p><strong>Workflow:</strong></p>
           <ol>
             <li>Select a step from the table below</li>
             <li>Select elements in the 3D viewer</li>
             <li>Use "Link Selection" to associate elements with the step</li>
-            <li>Set status using buttons or hotkeys: P (Pass), F (Fail), O (Open), N (N/A)</li>
+            <li>Set status using buttons or hotkeys: P (Pass), F (Fail), O (Ready for Inspection), N (N/A)</li>
           </ol>
-          <p><strong>Colors:</strong> Green = Pass, Red = Fail, Orange = N/A</p>
+          <p><strong>Colors:</strong> Green = Pass, Red = Fail, Blue = Ready for Inspection, Gray = N/A</p>
         </div>
       </bim-panel-section>
 
-      <bim-panel-section label="Selection">
-        ${selectionInfo}
-      </bim-panel-section>
-
-      <bim-panel-section label="ITP Steps (click to select)">
+      <bim-panel-section collapsed label="ITP Steps (click to select)">
         ${stepsTable}
       </bim-panel-section>
 
-      <bim-panel-section label="Link & Status">
+      <bim-panel-section collapsed label="Selection">
+        ${selectionInfo}
+      </bim-panel-section>
+
+      <bim-panel-section collapsed label="Link & Status">
         <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom: 1rem;">
           ${linkBtn}
         </div>
@@ -513,11 +590,38 @@ export default function QualityPanel(components: OBC.Components) {
         </div>
       </bim-panel-section>
 
-      <bim-panel-section label="Import/Export">
+      <bim-panel-section collapsed label="Import/Export">
         ${csvImportBtn}
         ${exportBtns}
       </bim-panel-section>
     </bim-panel>
   `,
   );
+
+  // Enhanced approach: Force collapsed state using multiple methods
+  const forceCollapsedState = () => {
+    const panelSections = panelComponent.querySelectorAll("bim-panel-section");
+    panelSections.forEach((section) => {
+      // Method 1: Set attribute
+      section.setAttribute("collapsed", "");
+      
+      // Method 2: Set property if available
+      if ("collapsed" in section) {
+        (section as any).collapsed = true;
+      }
+      
+      // Method 3: Set CSS custom property
+      (section as HTMLElement).style.setProperty(
+        "--bim-panel-section--content-height",
+        "0px",
+      );
+    });
+  };
+
+  // Apply collapsed state immediately and after DOM updates
+  setTimeout(forceCollapsedState, 0);
+  setTimeout(forceCollapsedState, 100);
+  setTimeout(forceCollapsedState, 500);
+
+  return panelComponent;
 }

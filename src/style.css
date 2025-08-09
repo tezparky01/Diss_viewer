@@ -101,6 +101,30 @@ bim-panel-section {
   overflow: auto;
 }
 
+/* Force collapsed state by default and disable animations */
+bim-panel-section {
+  --bim-panel-section--content-height: 0px;
+}
+
+bim-panel-section[collapsed] {
+  --bim-panel-section--content-height: 0px;
+}
+
+/* Disable slide animations on panel sections */
+bim-panel-section * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Hide content when collapsed */
+bim-panel-section[collapsed] > *:not([slot="label"]) {
+  display: none !important;
+}
+
+bim-panel-section:not([collapsed]) > *:not([slot="label"]) {
+  display: block !important;
+}
+
 bim-panel-section > bim-table {
   flex: 1;
 }
