@@ -32,13 +32,36 @@ export async function setStatus(
   status: Status,
   notes?: string,
 ) {
-  const now = new Date().toISOString();
-  await db.transaction("rw", db.inspections, async () => {
-    for (const e of selection) {
-      const pk = `${stepId}#${e.modelId}:${e.expressID}`;
-      await db.inspections.update(pk, { status, inspectedAt: now, notes });
-    }
-  });
+  try {
+    console.log(
+      `🔄 Setting status to "${status}" for ${selection.length} elements in step ${stepId}`,
+    );
+
+    const now = new Date().toISOString();
+    await db.transaction("rw", db.inspections, async () => {
+      for (const e of selection) {
+        const pk = `${stepId}#${e.modelId}:${e.expressID}`;
+        const result = await db.inspections.update(pk, {
+          status,
+          inspectedAt: now,
+          notes: notes || undefined,
+        });
+
+        if (result === 0) {
+          console.warn(
+            `⚠️ Failed to update status for ${pk} - record may not exist`,
+          );
+        } else {
+          console.log(`✅ Updated status for ${pk} to ${status}`);
+        }
+      }
+    });
+
+    console.log(`✅ Status update completed for step ${stepId}`);
+  } catch (error) {
+    console.error(`❌ Error setting status for step ${stepId}:`, error);
+    throw error;
+  }
 }
 
 export async function exportJSON() {
