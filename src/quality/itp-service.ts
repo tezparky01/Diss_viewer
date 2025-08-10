@@ -186,6 +186,51 @@ export async function getStepStatistics(stepId: string) {
   return stats;
 }
 
+// Get step statistics filtered by loaded models only
+export async function getStepStatisticsForLoadedModels(stepId: string, loadedModelIds: string[]) {
+  if (!loadedModelIds.length) {
+    return {
+      open: 0,
+      pass: 0,
+      fail: 0,
+      na: 0,
+      total: 0,
+    };
+  }
+
+  const rows = await db.inspections.where({ stepId }).toArray();
+  const filteredRows = rows.filter(row => row.modelId && loadedModelIds.includes(row.modelId));
+  
+  const stats = {
+    open: 0,
+    pass: 0,
+    fail: 0,
+    na: 0,
+    total: filteredRows.length,
+  };
+
+  for (const row of filteredRows) {
+    switch (row.status) {
+      case "Ready for Inspection":
+        stats.open++;
+        break;
+      case "Pass":
+        stats.pass++;
+        break;
+      case "Fail":
+        stats.fail++;
+        break;
+      case "NA":
+        stats.na++;
+        break;
+      default:
+        break;
+    }
+  }
+
+  return stats;
+}
+
 // Get all inspections for a step
 export async function getInspectionsForStep(stepId: string) {
   return db.inspections.where({ stepId }).toArray();
