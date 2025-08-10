@@ -1898,6 +1898,64 @@ export default function QualityPanel(components: OBC.Components) {
     };
     return BUI.html`<bim-button label="Import CSV Steps" @click=${onImport}></bim-button>`;
   });
+
+  // Clear Cache button
+  const clearCacheBtn = BUI.Component.create(() => {
+    const onClick = async () => {
+      // Show confirmation dialog
+      const confirmed = confirm(
+        "Are you sure you want to clear the database cache?\n\n" +
+        "This will:\n" +
+        "• Clear all loaded ITP steps and data\n" +
+        "• Reset all BIM model inspection statuses\n" +
+        "• Remove all element-step associations\n" +
+        "• Clear inspection progress matrix\n\n" +
+        "This action cannot be undone."
+      );
+      
+      if (!confirmed) return;
+      
+      try {
+        console.log("🗑️ Clearing database cache...");
+        
+        // Clear ITP database cache
+        await db.itp_steps.clear();
+        await db.inspections.clear();
+        console.log("Database tables cleared successfully");
+        
+        // Reset column settings
+        columnSettings.stepOrder = [];
+        columnSettings.visibleSteps = new Set();
+        columnSettings.groupBy = "none";
+        columnSettings.sortBy = "none";
+        
+        // Reset selected step
+        selectedStep = null;
+        
+        // Clear highlighting
+        const highlighter = components.get(OBF.Highlighter);
+        highlighter.clear();
+        
+        // Clear all element highlighting/coloring
+        clearAllHighlighting(components);
+        
+        // Reset UI components
+        await updateStepsDropdown();
+        await updateInspectionMatrix();
+        await updateSelectionInfo();
+        
+        alert("Database cache cleared successfully!\n\nAll ITP data and inspection statuses have been reset.");
+        console.log("✅ Database cache cleared successfully");
+        
+      } catch (error) {
+        console.error("❌ Error clearing database cache:", error);
+        alert("Error clearing database cache. Check console for details.");
+      }
+    };
+    
+    return BUI.html`<bim-button label="Clear Database Cache" style="background: #FF6B6B; color: white;" @click=${onClick}></bim-button>`;
+  });
+
   const exportBtns = BUI.Component.create(() => {
     const onCsv = async () => {
       const { stepsCsv, inspectionsCsv } = await exportCSV();
@@ -2013,6 +2071,9 @@ export default function QualityPanel(components: OBC.Components) {
         <div style="display: flex; flex-direction: column;">
           <div style="margin-bottom: 1.5rem !important;">
             ${csvImportBtn}
+          </div>
+          <div style="margin-bottom: 1.5rem !important;">
+            ${clearCacheBtn}
           </div>
           <div>
             ${exportBtns}
