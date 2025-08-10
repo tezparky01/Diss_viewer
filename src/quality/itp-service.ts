@@ -64,6 +64,55 @@ export async function setStatus(
   }
 }
 
+// Combined function to link elements and set status in one operation
+export async function linkAndSetStatus(
+  stepId: string,
+  selection: ElementSelection[],
+  status: Status,
+  notes?: string,
+) {
+  try {
+    console.log(
+      `🔗 Linking and setting status "${status}" for ${selection.length} elements in step ${stepId}`,
+    );
+
+    const now = new Date().toISOString();
+    
+    // Do everything in one transaction to ensure consistency
+    await db.transaction("rw", db.inspections, async () => {
+      for (const { modelId, expressID, guid } of selection) {
+        const modelKey = `${modelId}:${expressID}`;
+        const pk = `${stepId}#${modelKey}`;
+        
+        // Create or update the inspection record with the status
+        const row: InspectionRow = {
+          pk,
+          stepId,
+          guid: guid || "",
+          status,
+          inspectedAt: now,
+          modelId,
+          expressID,
+          modelKey,
+          notes: notes || undefined,
+        };
+        
+        // Use put to insert/update the record
+        await db.inspections.put(row);
+        console.log(`✅ Linked and set status for ${pk} to ${status}`);
+      }
+    });
+
+    console.log(`✅ Link and status update completed for step ${stepId}`);
+  } catch (error) {
+    console.error(
+      `❌ Error linking and setting status for step ${stepId}:`,
+      error,
+    );
+    throw error;
+  }
+}
+
 export async function exportJSON() {
   const [steps, inspections] = await Promise.all([
     db.itp_steps.toArray(),

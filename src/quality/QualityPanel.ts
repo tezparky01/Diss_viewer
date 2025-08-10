@@ -6,8 +6,7 @@ import * as FRAGS from "@thatopen/fragments";
 import { ITP_STEPS } from "./itp-model";
 import { db } from "./itp-db";
 import {
-  linkToStep,
-  setStatus,
+  linkAndSetStatus,
   exportCSV,
   exportJSON,
   getStepStatistics,
@@ -325,56 +324,268 @@ export default function QualityPanel(components: OBC.Components) {
   // Initialize selection info
   updateSelectionInfo();
 
-  // Link button
-  const linkBtn = BUI.Component.create(() => {
-    const onClick = async () => {
-      console.log("🔗 Link button clicked");
-      if (!selectedStep) {
-        console.warn("❌ No step selected");
-        return;
-      }
-      console.log(`📋 Selected step: ${selectedStep}`);
+  // Matrix helper functions
+  const getStatusCellStyle = (status: string) => {
+    switch (status) {
+      case "Pass":
+        return "background: #e8f5e8; color: #2d5a2d; border-left: 3px solid #4CAF50;";
+      case "Fail":
+        return "background: #ffe8e8; color: #8b0000; border-left: 3px solid #F44336;";
+      case "Ready for Inspection":
+        return "background: #e8f4ff; color: #003d82; border-left: 3px solid #0080FF;";
+      case "NA":
+        return "background: #f5f5f5; color: #666; border-left: 3px solid #9E9E9E;";
+      default:
+        return "background: #f9f9f9; border-left: 3px solid transparent;";
+    }
+  };
 
-      const selection = await getCurrentSelection(components);
-      if (selection.length === 0) {
-        console.warn("❌ No elements selected in 3D viewer");
-        return;
-      }
+  const getStatusIndicator = (status: string) => {
+    switch (status) {
+      case "Pass":
+      case "Fail":
+      case "Ready for Inspection":
+      case "NA":
+        return "●";
+      default:
+        return "";
+    }
+  };
 
-      console.log(
-        `🎯 Linking ${selection.length} elements to step ${selectedStep}`,
+  // Create inspection matrix function
+  const createInspectionMatrix = async () => {
+    try {
+      console.log("Creating inspection matrix...");
+      
+      // Get currently loaded models
+      const fragments = components.get(OBC.FragmentsManager);
+      const loadedModelIds = Array.from(fragments.list.keys());
+      console.log("Currently loaded models:", loadedModelIds);
+      
+      if (loadedModelIds.length === 0) {
+        return `
+          <div style="padding: 2rem; text-align: center; color: #666; font-style: italic;">
+            No models currently loaded in the viewer.
+          </div>
+        `;
+      }
+      
+      // Get all inspections and steps, and filter inspections by loaded models
+      const [allInspections, allSteps] = await Promise.all([
+        db.inspections.orderBy("inspectedAt").toArray(),
+        db.itp_steps.orderBy("stepId").toArray(),
+      ]);
+
+      // Filter inspections to only include currently loaded models
+      const filteredInspections = allInspections.filter(
+        (inspection) =>
+          inspection.modelId && loadedModelIds.includes(inspection.modelId),
       );
 
-      // Store the current step to restore it after operations
-      const currentStep = selectedStep;
+      console.log("Total inspections in DB:", allInspections.length);
+      console.log("Filtered inspections for loaded models:", filteredInspections.length);
+      console.log("Found steps:", allSteps.length);
 
-      try {
-        await linkToStep(selectedStep, selection);
-        console.log("✅ Successfully linked elements to step");
-
-        // Restore the selected step before repainting (in case it got cleared)
-        selectedStep = currentStep;
-
-        await repaintForStep(components, selectedStep);
-        console.log("🎨 Repainted elements for step");
-        await updateStepsTable();
-        console.log("📊 Updated steps table");
-
-        // Ensure the table row stays selected after operations
-        setTimeout(() => {
-          if (selectedStep !== currentStep) {
-            console.log(`🔄 Restoring step selection: ${currentStep}`);
-            selectedStep = currentStep;
+      // Get all Express IDs from all loaded models
+      const allElementsMap = new Map();
+      
+      for (const modelId of loadedModelIds) {
+        const model = fragments.list.get(modelId);
+        if (model) {
+          try {
+            const fragmentIds = await model.getItemsIdsWithGeometry();
+            console.log(`Model ${modelId}: Found ${fragmentIds.length} elements with geometry`);
+            
+            for (const expressID of fragmentIds) {
+              const elementKey = `${modelId}:${expressID}`;
+              allElementsMap.set(elementKey, {
+                expressID,
+                modelId,
+                guid: null, // Will be populated if we have inspection data
+                steps: new Map(),
+              });
+            }
+          } catch (error) {
+            console.warn(`Could not get elements from model ${modelId}:`, error);
           }
-        }, 100);
-      } catch (error) {
-        console.error("❌ Error linking elements:", error);
-        // Restore step selection even if there was an error
-        selectedStep = currentStep;
+        }
       }
-    };
-    return BUI.html`<bim-button label="Link Selection to Step" @click=${onClick}></bim-button>`;
-  });
+
+      // Now overlay the inspection data onto all elements
+      filteredInspections.forEach((inspection) => {
+        if (inspection.expressID) {
+          const elementKey = `${inspection.modelId}:${inspection.expressID}`;
+          if (allElementsMap.has(elementKey)) {
+            const element = allElementsMap.get(elementKey);
+            element.guid = inspection.guid; // Update with GUID from inspection data
+            element.steps.set(inspection.stepId, inspection);
+          }
+        }
+      });
+
+      console.log(`Total elements from all loaded models: ${allElementsMap.size}`);
+
+      if (allElementsMap.size === 0) {
+        return `
+          <div style="padding: 2rem; text-align: center; color: #666; font-style: italic;">
+            No elements found in currently loaded models.<br>
+            Ensure models have geometry data and are fully loaded.
+          </div>
+        `;
+      }
+
+      // Group inspections by Express ID instead of GUID - using ALL elements now
+      const elementMap = allElementsMap;
+
+      if (elementMap.size === 0) {
+        return `
+          <div style="padding: 2rem; text-align: center; color: #666; font-style: italic;">
+            No elements with Express IDs found. Try selecting elements in the 3D viewer and setting their status.
+          </div>
+        `;
+      }
+
+      // Create matrix HTML
+      return `
+        <div style="margin-top: 1rem; border: 1px solid #ddd; border-radius: 4px; overflow: auto; max-height: 500px; background: white;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">
+            <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
+              <tr>
+                <th style="padding: 8px; border: 1px solid #ddd; min-width: 100px; text-align: left; background: #f8f9fa;">
+                  Express ID
+                </th>
+                ${allSteps.map(step => 
+                  `<th style="padding: 6px 4px; border: 1px solid #ddd; min-width: 50px; text-align: center; background: #f8f9fa; writing-mode: vertical-rl; text-orientation: mixed;" title="${step.name}">
+                    ${step.stepId}
+                  </th>`
+                ).join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${Array.from(elementMap.entries()).map(([, elementData]) => 
+                `<tr style="hover:background: #f5f5f5;">
+                  <td style="padding: 6px 8px; border: 1px solid #ddd; font-family: 'Courier New', monospace; font-weight: bold; cursor: pointer;" title="Express ID ${elementData.expressID}">
+                    ${elementData.expressID}
+                  </td>
+                  ${allSteps.map((step) => {
+                    const inspection = elementData.steps.get(step.stepId);
+                    const cellStyle = inspection 
+                      ? getStatusCellStyle(inspection.status) 
+                      : "background: #f9f9f9; border-left: 3px solid transparent;";
+                    const cellContent = inspection 
+                      ? getStatusIndicator(inspection.status) 
+                      : "";
+                    const cellTitle = inspection 
+                      ? `${inspection.status} (${new Date(inspection.inspectedAt).toLocaleDateString()})` 
+                      : "Not Inspected";
+
+                    return `<td 
+                      style="padding: 4px; border: 1px solid #ddd; text-align: center; ${cellStyle} cursor: pointer;" 
+                      title="${cellTitle}"
+                      data-model-id="${elementData.modelId}"
+                      data-express-id="${elementData.expressID}"
+                      data-step-id="${step.stepId}"
+                      class="matrix-cell"
+                      onclick="window.handleMatrixCellClick('${elementData.modelId}', ${elementData.expressID}, '${step.stepId}', this)"
+                    >
+                      ${cellContent}
+                    </td>`;
+                  }).join("")}
+                </tr>`
+              ).join("")}
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top: 0.5rem; font-size: 0.7rem; color: #666; text-align: center;">
+          ${elementMap.size} elements • ${allSteps.length} ITP steps
+        </div>
+      `;
+    } catch (error) {
+      console.error("Error creating inspection matrix:", error);
+      return `
+        <div style="padding: 1rem; color: #d32f2f; text-align: center;">
+          Error loading inspection matrix. Check console for details.
+        </div>
+      `;
+    }
+  };
+
+  // Initialize and update matrix function
+  const updateInspectionMatrix = async () => {
+    try {
+      console.log("Updating inspection matrix...");
+      const newContent = await createInspectionMatrix();
+      // Find matrix in the DOM after it's rendered
+      setTimeout(() => {
+        const contentEl = document.querySelector("#matrix-content");
+        if (contentEl && typeof newContent === "string") {
+          contentEl.innerHTML = newContent;
+          console.log("Matrix updated successfully");
+        }
+      }, 100);
+    } catch (error) {
+      console.error("Error updating inspection matrix:", error);
+    }
+  };
+
+  // Matrix cell click handler for element highlighting and camera focus
+  const handleMatrixCellClick = async (
+    modelId: string,
+    expressID: number,
+    stepId: string,
+    cellElement: HTMLElement,
+  ) => {
+    try {
+      console.log(
+        `🎯 Matrix cell clicked: Model ${modelId}, Express ID ${expressID}, Step ${stepId}`,
+      );
+
+      const highlighter = components.get(OBF.Highlighter);
+      const worlds = components.get(OBC.Worlds);
+
+      // Ensure highlighter is setup
+      if (!highlighter.isSetup) {
+        const world = worlds.list.values().next().value;
+        if (world) {
+          highlighter.setup({
+            world,
+            selectMaterialDefinition: {
+              color: new THREE.Color("#BCF124"),
+              opacity: 1,
+              transparent: false,
+              renderedFaces: FRAGS.RenderedFaces.ONE,
+            },
+          });
+        }
+      }
+
+      // Clear previous selections
+      await highlighter.clear("select");
+
+      // Remove previous cell selection styling
+      document.querySelectorAll(".matrix-cell.selected").forEach((cell) => {
+        cell.classList.remove("selected");
+        (cell as HTMLElement).style.boxShadow = "";
+      });
+
+      // Highlight the selected element using the correct format
+      const modelIdMap: Record<string, Set<number>> = {};
+      modelIdMap[modelId] = new Set([expressID]);
+
+      await highlighter.highlightByID("select", modelIdMap as any, false);
+
+      // Add visual feedback to the selected cell
+      cellElement.classList.add("selected");
+      cellElement.style.boxShadow = "inset 0 0 0 2px #1976d2";
+
+      console.log(`✅ Element ${expressID} highlighted successfully`);
+    } catch (error) {
+      console.error("Error handling matrix cell click:", error);
+    }
+  };
+
+  // Make the handler available globally for onclick
+  (window as any).handleMatrixCellClick = handleMatrixCellClick;
 
   // Status buttons
   const passBtn = BUI.Component.create(() => {
@@ -388,9 +599,10 @@ export default function QualityPanel(components: OBC.Components) {
         console.warn("Please select elements in the 3D viewer first");
         return;
       }
-      await setStatus(selectedStep, selection, "Pass");
+      await linkAndSetStatus(selectedStep, selection, "Pass");
       await repaintForStep(components, selectedStep);
       await updateStepsTable();
+      await updateInspectionMatrix();
     };
     return BUI.html`<bim-button label="Set Pass" style="background: #4CAF50; color: white;" @click=${onClick}></bim-button>`;
   });
@@ -406,9 +618,10 @@ export default function QualityPanel(components: OBC.Components) {
         console.warn("Please select elements in the 3D viewer first");
         return;
       }
-      await setStatus(selectedStep, selection, "Fail");
+      await linkAndSetStatus(selectedStep, selection, "Fail");
       await repaintForStep(components, selectedStep);
       await updateStepsTable();
+      await updateInspectionMatrix();
     };
     return BUI.html`<bim-button label="Set Fail" style="background: #F44336; color: white;" @click=${onClick}></bim-button>`;
   });
@@ -424,9 +637,10 @@ export default function QualityPanel(components: OBC.Components) {
         console.warn("Please select elements in the 3D viewer first");
         return;
       }
-      await setStatus(selectedStep, selection, "Ready for Inspection");
+      await linkAndSetStatus(selectedStep, selection, "Ready for Inspection");
       await repaintForStep(components, selectedStep);
       await updateStepsTable();
+      await updateInspectionMatrix();
     };
     return BUI.html`<bim-button label="Ready for Inspection" style="background: #0080FF; color: white;" @click=${onClick}></bim-button>`;
   });
@@ -442,9 +656,10 @@ export default function QualityPanel(components: OBC.Components) {
         console.warn("Please select elements in the 3D viewer first");
         return;
       }
-      await setStatus(selectedStep, selection, "NA");
+      await linkAndSetStatus(selectedStep, selection, "NA");
       await repaintForStep(components, selectedStep);
       await updateStepsTable();
+      await updateInspectionMatrix();
     };
     return BUI.html`<bim-button label="Set N/A" style="background: #9E9E9E; color: white;" @click=${onClick}></bim-button>`;
   });
@@ -456,6 +671,18 @@ export default function QualityPanel(components: OBC.Components) {
     };
     return BUI.html`<bim-button label="Clear Highlighting" @click=${onClick}></bim-button>`;
   });
+
+  // Matrix component
+  const inspectionMatrix = BUI.Component.create(() => {
+    return BUI.html`
+      <div id="matrix-content" style="padding: 1rem; text-align: center; color: #666;">
+        Loading inspection matrix...
+      </div>
+    `;
+  });
+
+  // Initialize matrix after a delay
+  setTimeout(updateInspectionMatrix, 1000);
 
   // Bulk selection buttons removed per user request
 
@@ -574,8 +801,8 @@ export default function QualityPanel(components: OBC.Components) {
           <ol>
             <li>Select a step from the table below</li>
             <li>Select elements in the 3D viewer</li>
-            <li>Use "Link Selection" to associate elements with the step</li>
             <li>Set status using buttons or hotkeys: P (Pass), F (Fail), O (Ready for Inspection), N (N/A)</li>
+            <li>Elements will be automatically linked to the step when setting status</li>
           </ol>
           <p><strong>Colors:</strong> Green = Pass, Red = Fail, Blue = Ready for Inspection, Gray = N/A</p>
         </div>
@@ -589,11 +816,8 @@ export default function QualityPanel(components: OBC.Components) {
         ${selectionInfo}
       </bim-panel-section>
 
-      <bim-panel-section collapsed label="Link & Status">
+      <bim-panel-section collapsed label="Status">
         <div style="display: flex; flex-direction: column;">
-          <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom: 1.5rem !important;">
-            <div>${linkBtn}</div>
-          </div>
           <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom: 1.5rem !important;">
             <div>${passBtn}</div>
             <div>${failBtn}</div>
@@ -602,6 +826,17 @@ export default function QualityPanel(components: OBC.Components) {
           </div>
           <div style="display:flex; gap:1rem;">
             <div>${clearBtn}</div>
+          </div>
+        </div>
+      </bim-panel-section>
+
+      <bim-panel-section collapsed label="Inspection Progress Matrix">
+        <div style="padding: 0.5rem;">
+          <div style="font-size: 0.875rem; color: var(--bim-ui_main-contrast); margin-bottom: 1rem;">
+            Visual overview of all element inspection statuses across ITP steps.
+          </div>
+          <div id="inspection-matrix-container" style="background: white; border-radius: 4px;">
+            ${inspectionMatrix}
           </div>
         </div>
       </bim-panel-section>
