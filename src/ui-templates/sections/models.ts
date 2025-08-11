@@ -72,17 +72,21 @@ export const modelsPanelTemplate: BUI.StatefullComponent<ModelsPanelState> = (
   };
 
   return BUI.html`
-    <bim-panel-section fixed icon=${appIcons.MODEL} label="Models">
-      <div style="display: flex; gap: 0.5rem;">
-        <bim-text-input @input=${onSearch} vertical placeholder="Search..." debounce="200"></bim-text-input>
-        <bim-button style="flex: 0;" icon=${appIcons.ADD}>
-          <bim-context-menu style="gap: 0.25rem;">
-            <bim-button label="IFC" @click=${onAddIfcModel}></bim-button>
-            <bim-button label="Fragments" @click=${onAddFragmentsModel}></bim-button>
-          </bim-context-menu> 
-        </bim-button>
+    <bim-panel-section class="models-panel" fixed icon=${appIcons.MODEL} label="Models">
+      <div style="display: flex; flex-direction: column;">
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem !important;">
+          <bim-text-input @input=${onSearch} vertical placeholder="Search..." debounce="200"></bim-text-input>
+          <bim-button style="flex: 0;" icon=${appIcons.ADD}>
+            <bim-context-menu style="gap: 0.25rem;">
+              <bim-button label="IFC" @click=${onAddIfcModel}></bim-button>
+              <bim-button label="Fragments" @click=${onAddFragmentsModel}></bim-button>
+            </bim-context-menu> 
+          </bim-button>
+        </div>
+        <div>
+          ${modelsList}
+        </div>
       </div>
-      ${modelsList}
     </bim-panel-section> 
   `;
 };

@@ -101,6 +101,30 @@ bim-panel-section {
   overflow: auto;
 }
 
+/* Force collapsed state by default and disable animations */
+bim-panel-section {
+  --bim-panel-section--content-height: 0px;
+}
+
+bim-panel-section[collapsed] {
+  --bim-panel-section--content-height: 0px;
+}
+
+/* Disable slide animations on panel sections */
+bim-panel-section * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Hide content when collapsed */
+bim-panel-section[collapsed] > *:not([slot="label"]) {
+  display: none !important;
+}
+
+bim-panel-section:not([collapsed]) > *:not([slot="label"]) {
+  display: block !important;
+}
+
 bim-panel-section > bim-table {
   flex: 1;
 }
@@ -194,4 +218,22 @@ bim-grid[floating] .dashboard-card {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Quality Panel Button Styling - Keep normal size but differentiate from models */
+.quality-panel bim-button {
+  font-weight: 600;
+  border-radius: 0.375rem;
+}
+
+/* Models Panel Button Styling - Subtle, utility-focused */
+.models-panel bim-button {
+  font-weight: 400;
+  border-radius: 0.25rem;
+  background-color: var(--bim-ui_bg-contrast-20);
+  color: var(--bim-ui_main-contrast);
+}
+
+.models-panel bim-button:hover {
+  background-color: var(--bim-ui_bg-contrast-40);
 }

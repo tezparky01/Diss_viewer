@@ -23,6 +23,7 @@ export const appIcons = {
   RULER: "solar:ruler-bold",
   MODEL: "mage:box-3d-fill",
   LAYOUT: "tabler:layout-filled",
+  QUALITY: "material-symbols:engineering",
 };
 
 export const tooltips = {

@@ -143,6 +143,65 @@ highlighter.setup({
 // Ensure highlighter is enabled for model selection
 highlighter.enabled = true;
 
+// CRITICAL FIX: Add selection event handling for Quality system
+let lastSelectionMap: Record<string, Set<number>> = {};
+
+// Store selection globally for Quality module access
+(window as any).getCurrentBIMSelection = async () => {
+  const fragments = components.get(OBC.FragmentsManager);
+  try {
+    if (Object.keys(lastSelectionMap).length > 0) {
+      const modelIdMap = await fragments.getData(lastSelectionMap);
+      const result: Array<{ modelId: string; expressID: number }> = [];
+
+      for (const [modelId, expressIdMap] of Object.entries(modelIdMap)) {
+        if (expressIdMap && typeof expressIdMap === "object") {
+          for (const [expressIdStr] of Object.entries(expressIdMap)) {
+            const expressID = Number(expressIdStr);
+            if (expressID > 0) {
+              result.push({ modelId, expressID });
+            }
+          }
+        }
+      }
+      return result;
+    }
+    return [];
+  } catch (error) {
+    console.error("Error converting selection:", error);
+    return [];
+  }
+};
+
+// Listen for selection changes and update global state
+if (highlighter.events?.select?.onHighlight) {
+  highlighter.events.select.onHighlight.add((fragmentIdMap) => {
+    console.log("🎯 Selection changed:", fragmentIdMap);
+    lastSelectionMap = fragmentIdMap || {};
+
+    // Dispatch custom event for Quality module
+    window.dispatchEvent(
+      new CustomEvent("bim-selection-changed", {
+        detail: { fragmentIdMap, timestamp: Date.now() },
+      }),
+    );
+  });
+}
+
+if (highlighter.events?.select?.onClear) {
+  highlighter.events.select.onClear.add(() => {
+    console.log("🧹 Selection cleared");
+    lastSelectionMap = {};
+
+    // Dispatch clear event
+    window.dispatchEvent(
+      new CustomEvent("bim-selection-cleared", {
+        detail: { timestamp: Date.now() },
+      }),
+    );
+  });
+}
+
 // Clipper Setup - following That Open Company methodology
 const clipper = components.get(OBC.Clipper);
 
@@ -189,8 +248,8 @@ const lengthMeasurer = components.get(OBF.LengthMeasurement);
 // Provide a world to create dimensions inside
 lengthMeasurer.world = world;
 lengthMeasurer.color = new THREE.Color("#6528d7");
-// Enable to allow hit-testing and delete functionality
-lengthMeasurer.enabled = true;
+// Disabled by default - only enabled when user activates it
+lengthMeasurer.enabled = false;
 
 console.log("Length measurer initialized:", {
   world: lengthMeasurer.world ? "assigned" : "not assigned",
@@ -288,8 +347,8 @@ const areaMeasurer = components.get(OBF.AreaMeasurement);
 // Provide a world to create dimensions inside
 areaMeasurer.world = world;
 areaMeasurer.color = new THREE.Color("#6528d7");
-// Enable to allow hit-testing and delete functionality
-areaMeasurer.enabled = true;
+// Disabled by default - only enabled when user activates it
+areaMeasurer.enabled = false;
 
 console.log("Area measurer initialized:", {
   world: areaMeasurer.world ? "assigned" : "not assigned",
@@ -504,6 +563,7 @@ contentGrid.addEventListener("layoutchange", () => {
 
 const contentGridIcons: Record<TEMPLATES.ContentGridLayouts[number], string> = {
   Viewer: appIcons.MODEL,
+  Quality: appIcons.QUALITY,
 };
 
 // App Grid Setup
