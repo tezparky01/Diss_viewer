@@ -39,7 +39,7 @@ export async function repaintForStep(
     }
     if (!highlighter.styles.get("quality-na")) {
       highlighter.styles.set("quality-na", {
-        color: new THREE.Color("#9E9E9E"), // Gray
+        color: new THREE.Color("#FF8C00"), // Orange to match table cells
         opacity: 0.6,
         transparent: true,
         renderedFaces: 1,

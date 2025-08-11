@@ -133,7 +133,7 @@ export default function QualityPanel(components: OBC.Components) {
       });
 
       highlighter.styles.set("quality-na", {
-        color: new THREE.Color("#9E9E9E"), // Gray
+        color: new THREE.Color("#FF8C00"), // Orange to match table cells
         opacity: 0.6,
         transparent: true,
         renderedFaces: FRAGS.RenderedFaces.ONE,
@@ -514,13 +514,13 @@ export default function QualityPanel(components: OBC.Components) {
               <div style="
                 font-size: 0.9rem; 
                 font-weight: 600; 
-                color: ${stats.na > 0 ? '#4a5568' : '#a0aec0'};
+                color: ${stats.na > 0 ? '#cc6600' : '#a0aec0'};
                 margin-bottom: 0.15rem;
               ">${stats.na}</div>
               <div style="
                 font-size: 0.55rem; 
                 font-weight: 500; 
-                color: ${stats.na > 0 ? '#4a5568' : '#a0aec0'};
+                color: ${stats.na > 0 ? '#cc6600' : '#a0aec0'};
                 text-transform: uppercase;
                 letter-spacing: 0.03em;
               ">N/A</div>
@@ -677,7 +677,7 @@ export default function QualityPanel(components: OBC.Components) {
       case "Ready for Inspection":
         return "background: #e8f4ff; color: #003d82; border-left: 3px solid #0080FF;";
       case "NA":
-        return "background: #f5f5f5; color: #666; border-left: 3px solid #9E9E9E;";
+        return "background: rgba(255, 165, 0, 0.2); color: #cc6600; border-left: 3px solid #ff8c00;";
       default:
         return "background: #f9f9f9; border-left: 3px solid transparent;";
     }
@@ -1228,7 +1228,7 @@ export default function QualityPanel(components: OBC.Components) {
                       ? getStatusIndicator(inspection.status) 
                       : "";
                     const cellTitle = inspection 
-                      ? `${inspection.status} (${new Date(inspection.inspectedAt).toLocaleDateString()})` 
+                      ? `${inspection.status} (${new Date(inspection.inspectedAt).toLocaleString()})` 
                       : "Not Inspected - Click to select element";
 
                     return `<td 
@@ -1829,7 +1829,7 @@ export default function QualityPanel(components: OBC.Components) {
         await updateInspectionMatrix();
       }, 100);
     };
-    return BUI.html`<bim-button label="Set N/A" style="background: #9E9E9E; color: white;" @click=${onClick}></bim-button>`;
+    return BUI.html`<bim-button label="Set N/A" style="background: #FF8C00; color: white;" @click=${onClick}></bim-button>`;
   });
 
   // Clear highlighting button

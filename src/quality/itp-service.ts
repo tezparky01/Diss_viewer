@@ -118,7 +118,14 @@ export async function exportJSON() {
     db.itp_steps.toArray(),
     db.inspections.toArray(),
   ]);
-  return { steps, inspections };
+  
+  // Convert timestamps to local time for JSON export
+  const inspectionsWithLocalTime = inspections.map(inspection => ({
+    ...inspection,
+    inspectedAt: new Date(inspection.inspectedAt).toLocaleString()
+  }));
+  
+  return { steps, inspections: inspectionsWithLocalTime };
 }
 
 // Simple CSV export (header + rows). Replace with Papa Parse for richer quoting if needed.
@@ -143,7 +150,7 @@ export async function exportCSV(): Promise<{
       r.expressID,
       r.guid ?? "",
       r.status,
-      r.inspectedAt,
+      new Date(r.inspectedAt).toLocaleString(), // Convert to local time
       r.inspector ?? "",
       (r.notes ?? "").replace(/"/g, '""'),
     ]
