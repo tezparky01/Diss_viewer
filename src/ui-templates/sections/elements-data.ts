@@ -99,10 +99,10 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
         
         for (const elementId of elementIds) {
           try {
-            // Get basic element attributes
+            // Get basic element attributes including GUID with more comprehensive approach
             const [basicData] = await model.getItemsData([elementId], {
               attributesDefault: false,
-              attributes: ["Name", "GlobalId"],
+              attributes: ["Name", "GlobalId", "GlobalID", "GUID"],
             });
             
             // Get element category
@@ -115,13 +115,23 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
             const rawPsets = await getItemPropertySets(model, elementId);
             const formattedPsets = formatItemPsets(rawPsets);
             
+            // Extract GUID with fallback options
+            let guid = "";
+            if (basicData.GlobalId && "value" in basicData.GlobalId) {
+              guid = basicData.GlobalId.value;
+            } else if (basicData.GlobalID && "value" in basicData.GlobalID) {
+              guid = basicData.GlobalID.value;
+            } else if (basicData.GUID && "value" in basicData.GUID) {
+              guid = basicData.GUID.value;
+            }
+            
             // Create element object
             const element: any = {
               ElementID: elementId,
               Model: modelId,
               Category: category,
               Name: (basicData.Name && "value" in basicData.Name) ? basicData.Name.value : `Element_${elementId}`,
-              GUID: (basicData.GlobalId && "value" in basicData.GlobalId) ? basicData.GlobalId.value : "",
+              GUID: guid || `MISSING-GUID-${elementId}`,
             };
             
             // Add Property Sets as flattened properties
