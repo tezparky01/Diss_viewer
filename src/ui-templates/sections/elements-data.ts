@@ -484,8 +484,8 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
           <bim-text-input @input=${search} vertical placeholder="Search..." debounce="200"></bim-text-input>
           <bim-button style="flex: 0;" @click=${toggleExpanded} icon=${appIcons.EXPAND}></bim-button>
           <bim-button style="flex: 0;" @click=${() => propsTable.downloadData("ElementData", "tsv")} icon=${appIcons.EXPORT} tooltip-title="Export Data" tooltip-text="Export the shown properties to TSV."></bim-button>
-          <bim-button style="flex: 0;" @click=${exportSimpleCSV} icon=${appIcons.EXPORT} tooltip-title="CSV Export" tooltip-text="Export ALL elements with complete Property Sets to CSV"></bim-button>
-          <bim-button style="flex: 0;" @click=${exportTrueStarSchema} icon=${appIcons.EXPORT} tooltip-title="Dual FACT Star Schema" tooltip-text="Export as 6 files: 4 DIM + 2 specialized FACT tables with hash-based consistent IDs"></bim-button>able)"></bim-button>
+          <bim-button style="flex: 0;" @click=${exportSimpleCSV} icon=${appIcons.MODEL} tooltip-title="CSV Export" tooltip-text="Export ALL elements with complete Property Sets to CSV"></bim-button>
+          <bim-button style="flex: 0;" @click=${exportTrueStarSchema} icon=${appIcons.LAYOUT} tooltip-title="Dual FACT Star Schema" tooltip-text="Export as 6 files: 4 DIM + 2 specialized FACT tables with hash-based consistent IDs"></bim-button>
         </div>
         <div>
           ${propsTable}
