@@ -13,8 +13,47 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
 > = (state) => {
   const { components } = state;
 
-  // const fragments = components.get(OBC.FragmentsManager);
+  const fragments = components.get(OBC.FragmentsManager);
   const highlighter = components.get(OBF.Highlighter);
+
+  // Helper function to get Property Sets using correct ThatOpen approach
+  const getItemPropertySets = async (model: any, localId: number) => {
+    if (!localId) return null;
+    try {
+      const [data] = await model.getItemsData([localId], {
+        attributesDefault: false,
+        attributes: ["Name", "NominalValue"],
+        relations: {
+          IsDefinedBy: { attributes: true, relations: true },
+          DefinesOcurrence: { attributes: false, relations: false },
+        },
+      });
+      return data.IsDefinedBy ?? [];
+    } catch (error) {
+      console.warn("Could not get property sets:", error);
+      return [];
+    }
+  };
+
+  // Helper function to format property sets into readable object
+  const formatItemPsets = (rawPsets: any[]) => {
+    const result: Record<string, Record<string, any>> = {};
+    for (const [_, pset] of rawPsets.entries()) {
+      const { Name: psetName, HasProperties } = pset;
+      if (!("value" in psetName && Array.isArray(HasProperties))) continue;
+      const props: Record<string, any> = {};
+      for (const [_, prop] of HasProperties.entries()) {
+        const { Name, NominalValue } = prop;
+        if (!("value" in Name && "value" in NominalValue)) continue;
+        const name = Name.value;
+        const nominalValue = NominalValue.value;
+        if (!(name && nominalValue !== undefined)) continue;
+        props[name] = nominalValue;
+      }
+      result[psetName.value] = props;
+    }
+    return result;
+  };
 
   const [propsTable, updatePropsTable] = CUI.tables.itemsData({
     components,
@@ -45,6 +84,88 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
     propsTable.expanded = !propsTable.expanded;
   };
 
+  // Enhanced export function using correct Property Set extraction
+  const exportWithPropertySets = async () => {
+    try {
+      console.log("🚀 Starting ENHANCED export with Property Sets...");
+      const allElementsData: any[] = [];
+      
+      for (const [modelId, model] of fragments.list) {
+        console.log(`📊 Processing model: ${modelId}`);
+        
+        // Get all elements with geometry
+        const elementIds = await model.getItemsIdsWithGeometry();
+        console.log(`Found ${elementIds.length} elements in model ${modelId}`);
+        
+        for (const elementId of elementIds) {
+          try {
+            // Get basic element attributes
+            const [basicData] = await model.getItemsData([elementId], {
+              attributesDefault: false,
+              attributes: ["Name", "GlobalId"],
+            });
+            
+            // Get element category
+            const categories = await model.getCategories();
+            const allElementIds = await model.getItemsIdsWithGeometry();
+            const elementIndex = allElementIds.indexOf(elementId);
+            const category = elementIndex >= 0 && categories[elementIndex] ? categories[elementIndex] : "Unknown";
+            
+            // Get Property Sets using the correct ThatOpen approach
+            const rawPsets = await getItemPropertySets(model, elementId);
+            const formattedPsets = formatItemPsets(rawPsets);
+            
+            // Create element object
+            const element: any = {
+              ElementID: elementId,
+              Model: modelId,
+              Category: category,
+              Name: (basicData.Name && "value" in basicData.Name) ? basicData.Name.value : `Element_${elementId}`,
+              GUID: (basicData.GlobalId && "value" in basicData.GlobalId) ? basicData.GlobalId.value : "",
+            };
+            
+            // Add Property Sets as flattened properties
+            for (const [psetName, properties] of Object.entries(formattedPsets)) {
+              for (const [propName, propValue] of Object.entries(properties as any)) {
+                element[`${psetName}.${propName}`] = propValue;
+              }
+            }
+            
+            allElementsData.push(element);
+            
+            if (Object.keys(formattedPsets).length > 0) {
+              console.log(`✅ Element ${elementId}: Found ${Object.keys(formattedPsets).length} property sets`);
+            }
+            
+          } catch (elementError) {
+            console.warn(`⚠️ Could not process element ${elementId}:`, elementError);
+          }
+        }
+      }
+      
+      if (allElementsData.length === 0) {
+        alert("No elements with property data found");
+        return;
+      }
+      
+      // Export as JSON
+      const dataStr = JSON.stringify(allElementsData, null, 2);
+      const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
+      
+      const exportFileDefaultName = `elements-with-psets-${Date.now()}.json`;
+      const linkElement = document.createElement("a");
+      linkElement.setAttribute("href", dataUri);
+      linkElement.setAttribute("download", exportFileDefaultName);
+      linkElement.click();
+      
+      console.log(`🎉 Successfully exported ${allElementsData.length} elements with Property Sets!`);
+      
+    } catch (error) {
+      console.error("❌ Enhanced export failed:", error);
+      alert("Export failed. Check console for details.");
+    }
+  };
+
   const sectionId = BUI.Manager.newRandomId();
 
   return BUI.html`
@@ -54,6 +175,7 @@ export const elementsDataPanelTemplate: BUI.StatefullComponent<
           <bim-text-input @input=${search} vertical placeholder="Search..." debounce="200"></bim-text-input>
           <bim-button style="flex: 0;" @click=${toggleExpanded} icon=${appIcons.EXPAND}></bim-button>
           <bim-button style="flex: 0;" @click=${() => propsTable.downloadData("ElementData", "tsv")} icon=${appIcons.EXPORT} tooltip-title="Export Data" tooltip-text="Export the shown properties to TSV."></bim-button>
+          <bim-button style="flex: 0;" @click=${exportWithPropertySets} icon=${appIcons.EXPORT} tooltip-title="Export with Psets" tooltip-text="Export ALL elements with complete Property Sets"></bim-button>
         </div>
         <div>
           ${propsTable}
