@@ -487,11 +487,15 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
   world.scene.three.add(model.object);
   await fragments.core.update(true);
   
-  // Update Tools Management panel when a new model is loaded
+  // Update Tools Management and Elements Data panels when a new model is loaded
   const contentGrid = document.getElementById(CONTENT_GRID_ID) as any;
   if (contentGrid?.updateComponent?.toolsManagement) {
     console.log("📊 Updating Tools Management panel - models now active");
     contentGrid.updateComponent.toolsManagement();
+  }
+  if (contentGrid?.updateComponent?.elementData) {
+    console.log("📊 Updating Elements Data panel - models now active");
+    contentGrid.updateComponent.elementData();
   }
 });
 
@@ -503,6 +507,10 @@ fragments.list.onItemDeleted.add(() => {
   if (contentGrid?.updateComponent?.toolsManagement) {
     console.log("📊 Updating Tools Management panel - checking model count");
     contentGrid.updateComponent.toolsManagement();
+  }
+  if (contentGrid?.updateComponent?.elementData) {
+    console.log("📊 Updating Elements Data panel - checking model count");
+    contentGrid.updateComponent.elementData();
   }
 });
 

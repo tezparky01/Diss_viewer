@@ -72,7 +72,7 @@ const updateGridLayout = (
     Viewer: {
       template: `
         "models viewer elementData" 1fr
-        "viewpoints viewer toolsManagement" 1fr
+        "viewpoints viewer elementData" 1fr
         /${leftSize} 1fr ${rightSize}
       `,
     },
@@ -181,24 +181,12 @@ const addResizeHandles = (gridId: string) => {
   const leftPanels = gridElement.querySelectorAll(
     '[slot="models"], [slot="viewpoints"]',
   );
-  const rightPanels = gridElement.querySelectorAll(
-    '[slot="elementData"], [slot="toolsManagement"]',
-  );
-
+  
   leftPanels.forEach((panel) => {
     if (!panel.querySelector(".resize-handle-vertical")) {
       const handle = document.createElement("div");
       handle.className = "resize-handle-vertical resize-handle-left";
       setupResizeHandle(handle, gridId, "left");
-      panel.appendChild(handle);
-    }
-  });
-
-  rightPanels.forEach((panel) => {
-    if (!panel.querySelector(".resize-handle-vertical")) {
-      const handle = document.createElement("div");
-      handle.className = "resize-handle-vertical resize-handle-right";
-      setupResizeHandle(handle, gridId, "right");
       panel.appendChild(handle);
     }
   });
@@ -237,17 +225,17 @@ export const contentGridTemplate: BUI.StatefullComponent<ContentGridState> = (
       viewer: state.viewportTemplate,
     };
 
-    // Get stored sizes or use defaults
+    // Get stored sizes or use defaults (moderate size for Elements Data)
     const leftSize =
       localStorage.getItem("grid-left-size") || SMALL_COLUMN_WIDTH;
     const rightSize =
-      localStorage.getItem("grid-right-size") || SMALL_COLUMN_WIDTH;
+      localStorage.getItem("grid-right-size") || "450px"; // More moderate default for Elements Data
 
     grid.layouts = {
       Viewer: {
         template: `
           "models viewer elementData" 1fr
-          "viewpoints viewer toolsManagement" 1fr
+          "viewpoints viewer elementData" 1fr
           /${leftSize} 1fr ${rightSize}
         `,
       },

@@ -1,6 +1,6 @@
 export const CONTENT_GRID_ID = "app-content";
 export const CONTENT_GRID_GAP = "1rem";
-export const SMALL_COLUMN_WIDTH = "22rem";
+export const SMALL_COLUMN_WIDTH = "11rem"; // 50% narrower than original 22rem
 export const MEDIUM_COLUMN_WIDTH = "25rem";
 
 export const appIcons = {
