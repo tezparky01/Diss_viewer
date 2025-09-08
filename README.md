@@ -119,6 +119,26 @@ This project uses TypeScript with strict type checking enabled. Please ensure al
 4. Test thoroughly
 5. Submit a pull request
 
+For detailed Git workflow instructions, including how to update the master branch with new commits, see [GIT_WORKFLOW.md](./GIT_WORKFLOW.md).
+
+### Quick Git Commands
+
+Use the provided helper script for common Git operations:
+
+```bash
+# Show current git status and branches
+./git-workflow-helper.sh status
+
+# Update master branch with latest changes
+./git-workflow-helper.sh update-master
+
+# Create a new feature branch
+./git-workflow-helper.sh create-branch feature/your-feature-name
+
+# Merge feature branch to master
+./git-workflow-helper.sh merge feature/your-feature-name
+```
+
 ## License
 
 This project is part of a dissertation research project.
