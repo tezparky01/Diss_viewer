@@ -39,7 +39,7 @@ export type InspectionRow = {
   notes?: string;
   inspector?: string;
   inspectedAt: string; // ISO
-  
+
   // Legacy fields for compatibility/export (optional)
   modelId?: string;
   expressID?: number;
